@@ -22,25 +22,6 @@
         .leaderboard-item.third { font-size: 24px; color: #cd7f32; }
         #player-list { list-style: none; padding: 0; }
         #player-list li { padding: 8px; background: #f9f9f9; margin-bottom: 4px; border-radius: 4px; }
-        /* スタイル追加 */
-        .secondary { background: #6c757d; }
-        .secondary:active { background: #545b62; }
-        #focus-players-container > div {
-            flex: 1 1 200px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 10px;
-            background: #f9f9f9;
-        }
-        .focus-player-input {
-            width: 100%;
-            margin-bottom: 10px;
-        }
-        .focus-player-name {
-            font-weight: bold;
-            font-size: 18px;
-            margin-bottom: 5px;
-        }
     </style>
 </head>
 <body>
@@ -65,47 +46,19 @@
     </div>
 
     <!-- ポイントセクション -->
-<!-- ポイントセクション内に追加 -->
-<div class="card">
-    <h3>⚡ フォーカスモード（同時操作）</h3>
-    <button id="toggle-focus-mode" class="secondary">フォーカスモードを開始</button>
-    
-    <!-- フォーカス設定パネル（初期は非表示） -->
-    <div id="focus-setup" style="display:none; margin-top:15px;">
-        <h4>フォーカスする3人を選んでください</h4>
-        <select id="focus-player1" class="focus-select"></select>
-        <select id="focus-player2" class="focus-select"></select>
-        <select id="focus-player3" class="focus-select"></select>
-        <button id="apply-focus" class="primary">この3人でフォーカス開始</button>
-        <button id="cancel-focus" class="danger">キャンセル</button>
-    </div>
-
-    <!-- フォーカス操作パネル（フォーカス中に表示） -->
-    <div id="focus-panel" style="display:none; margin-top:15px;">
-        <h4>フォーカス中: <span id="focus-status"></span></h4>
-        <div id="focus-players-container" style="display: flex; flex-wrap: wrap; gap: 10px;">
-            <!-- ここにJavaScriptで動的に3列の入力フォームを生成 -->
-        </div>
-        <div style="margin-top: 15px;">
-            <button id="submit-focus-all" class="primary">全員のポイントを一括送信</button>
-            <button id="exit-focus" class="secondary">フォーカス終了</button>
+    <div id="points-section" class="tab-content">
+        <div class="card">
+            <h2>ポイント更新</h2>
+            <select id="player-select"></select>
+            <input type="number" id="bet" placeholder="掛け金" min="1" value="1">
+            <input type="number" id="multiplier" placeholder="倍率" step="0.1" min="1" value="1">
+            <button id="submit-points">送信</button>
+            <hr>
+            <h3>やり直し</h3>
+            <select id="undo-player-select"></select>
+            <button id="undo-button" class="danger">最後の操作を取り消し</button>
         </div>
     </div>
-</div>
-
-<!-- 通常モードはそのまま残す -->
-<div class="card">
-    <h3>🔄 通常モード（個別操作）</h3>
-    <!-- 既存のポイント操作用UI -->
-    <select id="player-select"></select>
-    <input type="number" id="bet" placeholder="掛け金" min="1" value="1">
-    <input type="number" id="multiplier" placeholder="倍率" step="0.1" min="1" value="1">
-    <button id="submit-points">送信</button>
-    <hr>
-    <h3>やり直し</h3>
-    <select id="undo-player-select"></select>
-    <button id="undo-button" class="danger">最後の操作を取り消し</button>
-</div>
 
     <!-- ランキングセクション（プロジェクタ表示用） -->
     <div id="leaderboard-section" class="tab-content">
