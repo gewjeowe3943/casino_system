@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>カジノシステム</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 0; background: #f0f0f0; }
+        header { background: #333; color: white; padding: 10px; display: flex; flex-wrap: wrap; gap: 5px; }
+        .tab-button { background: #555; color: white; border: none; padding: 12px 16px; font-size: 16px; flex: 1; min-width: 80px; }
+        .tab-button.active { background: #007bff; }
+        .tab-content { display: none; padding: 15px; }
+        .tab-content.active { display: block; }
+        .card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        input, select, button { font-size: 16px; padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:active { background: #0056b3; }
+        .danger { background: #dc3545; }
+        .leaderboard-item { font-size: 20px; padding: 10px; border-bottom: 1px solid #ccc; }
+        .leaderboard-item.first { font-size: 32px; font-weight: bold; color: gold; }
+        .leaderboard-item.second { font-size: 28px; color: silver; }
+        .leaderboard-item.third { font-size: 24px; color: #cd7f32; }
+        #player-list { list-style: none; padding: 0; }
+        #player-list li { padding: 8px; background: #f9f9f9; margin-bottom: 4px; border-radius: 4px; }
+        /* スタイル追加 */
+        .secondary { background: #6c757d; }
+        .secondary:active { background: #545b62; }
+        #focus-players-container > div {
+            flex: 1 1 200px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 10px;
+            background: #f9f9f9;
+        }
+        .focus-player-input {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .focus-player-name {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <button class="tab-button active" data-tab="entry">エントリー</button>
+        <button class="tab-button" data-tab="points">ポイント</button>
+        <button class="tab-button" data-tab="leaderboard">ランキング</button>
+        <button class="tab-button" data-tab="management">管理</button>
+    </header>
+
+    <!-- エントリーセクション -->
+    <div id="entry-section" class="tab-content active">
+        <div class="card">
+            <h2>プレイヤーエントリー</h2>
+            <input type="text" id="player-name" placeholder="名前">
+            <button id="add-player">追加</button>
+        </div>
+        <div class="card">
+            <h3>現在のプレイヤー</h3>
+            <ul id="player-list"></ul>
+        </div>
+    </div>
+
+    <!-- ポイントセクション -->
+<!-- ポイントセクション内に追加 -->
+<div class="card">
+    <h3>⚡ フォーカスモード（同時操作）</h3>
+    <button id="toggle-focus-mode" class="secondary">フォーカスモードを開始</button>
+    
+    <!-- フォーカス設定パネル（初期は非表示） -->
+    <div id="focus-setup" style="display:none; margin-top:15px;">
+        <h4>フォーカスする3人を選んでください</h4>
+        <select id="focus-player1" class="focus-select"></select>
+        <select id="focus-player2" class="focus-select"></select>
+        <select id="focus-player3" class="focus-select"></select>
+        <button id="apply-focus" class="primary">この3人でフォーカス開始</button>
+        <button id="cancel-focus" class="danger">キャンセル</button>
+    </div>
+
+    <!-- フォーカス操作パネル（フォーカス中に表示） -->
+    <div id="focus-panel" style="display:none; margin-top:15px;">
+        <h4>フォーカス中: <span id="focus-status"></span></h4>
+        <div id="focus-players-container" style="display: flex; flex-wrap: wrap; gap: 10px;">
+            <!-- ここにJavaScriptで動的に3列の入力フォームを生成 -->
+        </div>
+        <div style="margin-top: 15px;">
+            <button id="submit-focus-all" class="primary">全員のポイントを一括送信</button>
+            <button id="exit-focus" class="secondary">フォーカス終了</button>
+        </div>
+    </div>
+</div>
+
+<!-- 通常モードはそのまま残す -->
+<div class="card">
+    <h3>🔄 通常モード（個別操作）</h3>
+    <!-- 既存のポイント操作用UI -->
+    <select id="player-select"></select>
+    <input type="number" id="bet" placeholder="掛け金" min="1" value="1">
+    <input type="number" id="multiplier" placeholder="倍率" step="0.1" min="1" value="1">
+    <button id="submit-points">送信</button>
+    <hr>
+    <h3>やり直し</h3>
+    <select id="undo-player-select"></select>
+    <button id="undo-button" class="danger">最後の操作を取り消し</button>
+</div>
+
+    <!-- ランキングセクション（プロジェクタ表示用） -->
+    <div id="leaderboard-section" class="tab-content">
+        <div class="card">
+            <h2>🏆 現在のランキング 🏆</h2>
+            <div id="leaderboard"></div>
+        </div>
+    </div>
+
+    <!-- 管理セクション -->
+    <div id="management-section" class="tab-content">
+        <div class="card">
+            <h2>ゲーム管理</h2>
+            <button id="reset-game" class="danger">ゲーム終了＆リセット</button>
+            <p>※全プレイヤーのポイントが5に戻ります</p>
+        </div>
+        <!-- 履歴表示（MVPでは簡易的に実装、後で拡張） -->
+        <div class="card">
+            <h3>操作履歴（ダウンロード可）</h3>
+            <button id="download-csv">CSVダウンロード</button>
+            <!-- 履歴テーブルは後ほどAPIから取得して表示可能だが、MVPではダウンロードのみ -->
+        </div>
+    </div>
+
+    <script>
+        // タブ切り替え
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                const tabName = btn.dataset.tab;
+                document.getElementById(tabName + '-section').classList.add('active');
+            });
+        });
+
+        // プレイヤー一覧を取得してUIに反映
+        async function fetchPlayers() {
+            const res = await fetch('/api/players');
+            const players = await res.json();
+            // リスト表示
+            const list = document.getElementById('player-list');
+            list.innerHTML = players.map(p => `<li>${p.name} (${p.points} pt)</li>`).join('');
+            // セレクトボックスを更新
+            const selects = ['player-select', 'undo-player-select'];
+            selects.forEach(id => {
+                const sel = document.getElementById(id);
+                if (sel) {
+                    sel.innerHTML = players.map(p => `<option value="${p.id}">${p.name} (${p.points} pt)</option>`).join('');
+                }
+            });
+            return players;
+        }
+
+        // ランキング表示
+        async function fetchLeaderboard() {
+            const res = await fetch('/api/leaderboard');
+            const top = await res.json();
+            const div = document.getElementById('leaderboard');
+            if (top.length === 0) {
+                div.innerHTML = '<p>まだプレイヤーがいません</p>';
+                return;
+            }
+            let html = '';
+            top.forEach((p, idx) => {
+                let cls = '';
+                if (idx === 0) cls = 'first';
+                else if (idx === 1) cls = 'second';
+                else if (idx === 2) cls = 'third';
+                html += `<div class="leaderboard-item ${cls}">${idx+1}位: ${p.name} (${p.points} pt)</div>`;
+            });
+            div.innerHTML = html;
+        }
+
+        // 初期化
+        async function refresh() {
+            await fetchPlayers();
+            await fetchLeaderboard();
+        }
+        refresh();
+        setInterval(refresh, 5000); // 5秒ごとに更新
+
+        // プレイヤー追加
+        document.getElementById('add-player').addEventListener('click', async () => {
+            const name = document.getElementById('player-name').value.trim();
+            if (!name) return alert('名前を入力してください');
+            const res = await fetch('/api/players', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name})
+            });
+            const data = await res.json();
+            if (res.ok) {
+                document.getElementById('player-name').value = '';
+                refresh();
+            } else {
+                alert(data.error);
+            }
+        });
+
+        // ポイント送信
+        document.getElementById('submit-points').addEventListener('click', async () => {
+            const player_id = document.getElementById('player-select').value;
+            const bet = parseInt(document.getElementById('bet').value);
+            const multiplier = parseFloat(document.getElementById('multiplier').value);
+            if (!player_id || bet <= 0 || multiplier <= 0) return alert('正しい値を入力してください');
+            const res = await fetch('/api/points', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({player_id, bet, multiplier})
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert(`更新完了！新しいポイント: ${data.new_points}`);
+                refresh();
+            } else {
+                alert(data.error);
+            }
+        });
+
+        // 取り消し（Undo）
+        document.getElementById('undo-button').addEventListener('click', async () => {
+            const player_id = document.getElementById('undo-player-select').value;
+            if (!player_id) return alert('プレイヤーを選んでください');
+            const res = await fetch('/api/undo', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({player_id})
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert(`取り消しました。新しいポイント: ${data.new_points}`);
+                refresh();
+            } else {
+                alert(data.error);
+            }
+        });
+
+        // ゲームリセット
+        document.getElementById('reset-game').addEventListener('click', async () => {
+            if (!confirm('本当にリセットしますか？全プレイヤーのポイントが5になります。')) return;
+            const res = await fetch('/api/reset', {method: 'POST'});
+            if (res.ok) {
+                alert('リセット完了');
+                refresh();
+            }
+        });
+
+        // CSVダウンロード（後で実装：履歴APIが必要）
+        document.getElementById('download-csv').addEventListener('click', () => {
+            window.location.href = '/api/transactions/export';
+        });
+    </script>
+</body>
+</html>
