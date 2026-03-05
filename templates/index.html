@@ -199,7 +199,7 @@
 
         // ゲームリセット
         document.getElementById('reset-game').addEventListener('click', async () => {
-            if (!confirm('本当にリセットしますか？全プレイヤーのポイントが5になります。')) return;
+            if (!confirm('本当にリセットしますか？全プレイヤーのポイントが消去されます。')) return;
             const res = await fetch('/api/reset', {method: 'POST'});
             if (res.ok) {
                 alert('リセット完了');
