@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify, render_template
 import sqlite3
-import os
 
 app = Flask(__name__)
 DATABASE = 'casino.db'
@@ -137,9 +136,17 @@ def leaderboard():
         ''').fetchall()
     return jsonify([dict(t) for t in top])
 
-# ゲーム終了（全プレイヤーのポイントを5にリセット）
+# ゲーム終了＆次の客の受け入れ準備（全データ削除）
 @app.route('/api/reset', methods=['POST'])
 def reset():
+    with get_db() as conn:
+        conn.execute('DELETE FROM transactions')
+        conn.execute('DELETE FROM players')
+        conn.commit()
+    return jsonify({'message': 'リセット完了（次の客をどうぞ）'})
+
+@app.route('/api/clear', methods=['POST'])
+def clear():
     with get_db() as conn:
         conn.execute('DELETE FROM transactions')  # 履歴もクリア（必要に応じて）
         conn.execute('UPDATE players SET points = 5')
