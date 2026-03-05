@@ -16,19 +16,27 @@
         button { background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
         button:active { background: #0056b3; }
         .danger { background: #dc3545; }
-        .leaderboard-item { font-size: 20px; padding: 10px; border-bottom: 1px solid #ccc; }
-        .leaderboard-item.first { font-size: 32px; font-weight: bold; color: gold; }
-        .leaderboard-item.second { font-size: 28px; color: silver; }
-        .leaderboard-item.third { font-size: 24px; color: #cd7f32; }
-        #player-list { list-style: none; padding: 0; }
-        #player-list li { padding: 8px; background: #f9f9f9; margin-bottom: 4px; border-radius: 4px; }
+        .success { background: #28a745; }
+        .player-list { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; }
+        .player-list li { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .player-list li span:first-child {flex: 1; }
+
+        .player-list li:last-child { border-bottom: none; }
+        .player-list li.selected { background: #cce5ff; }
+        .delete-btn { background: #dc3545; color: white; border: none; border-radius: 4px; padding: 5px 15px; cursor: pointer; margin-left: 10px; white-space: nowrap; font-size: 16px; min-width:45px; }
+        .rank-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; }
+        .rank { font-weight: bold; margin-right: 10px; }
+        .name { flex: 1; }
+        .points { font-weight: bold; }
+        .no-activity { color: #999; }
+        #selected-player-display { font-weight: bold; margin-bottom: 10px; }
     </style>
 </head>
 <body>
     <header>
         <button class="tab-button active" data-tab="entry">エントリー</button>
         <button class="tab-button" data-tab="points">ポイント</button>
-        <button class="tab-button" data-tab="leaderboard">ランキング</button>
+        <button class="tab-button" data-tab="ranking">ランキング</button>
         <button class="tab-button" data-tab="management">管理</button>
     </header>
 
@@ -41,30 +49,31 @@
         </div>
         <div class="card">
             <h3>現在のプレイヤー</h3>
-            <ul id="player-list"></ul>
+            <ul id="player-list" class="player-list"></ul>
         </div>
     </div>
 
     <!-- ポイントセクション -->
     <div id="points-section" class="tab-content">
         <div class="card">
-            <h2>ポイント更新</h2>
-            <select id="player-select"></select>
+            <h2>プレイヤー一覧 (タップで選択)</h2>
+            <ul id="points-player-list" class="player-list"></ul>
+            <div id="selected-player-display">選択: なし</div>
+        </div>
+        <div class="card">
+            <h2>操作</h2>
             <input type="number" id="bet" placeholder="掛け金" min="1" value="1">
             <input type="number" id="multiplier" placeholder="倍率" step="0.1" min="1" value="1">
             <button id="submit-points">送信</button>
-            <hr>
-            <h3>やり直し</h3>
-            <select id="undo-player-select"></select>
-            <button id="undo-button" class="danger">最後の操作を取り消し</button>
+            <button id="undo-button" class="danger">やり直し</button>
         </div>
     </div>
 
-    <!-- ランキングセクション（プロジェクタ表示用） -->
-    <div id="leaderboard-section" class="tab-content">
+    <!-- ランキングセクション -->
+    <div id="ranking-section" class="tab-content">
         <div class="card">
-            <h2>🏆 現在のランキング 🏆</h2>
-            <div id="leaderboard"></div>
+            <h2>🏆 全プレイヤーランキング 🏆</h2>
+            <div id="ranking-list"></div>
         </div>
     </div>
 
@@ -72,18 +81,26 @@
     <div id="management-section" class="tab-content">
         <div class="card">
             <h2>ゲーム管理</h2>
-            <button id="reset-game" class="danger">ゲーム終了＆リセット</button>
-            <p>※全プレイヤーのポイントが消去されます</p>
+            <button id="reset-game" class="danger">全データ削除（次の客用）</button>
+            <button id="clear-points" class="danger">ポイントのみリセット（履歴クリア）</button>
         </div>
-        <!-- 履歴表示（MVPでは簡易的に実装、後で拡張） -->
         <div class="card">
-            <h3>操作履歴（ダウンロード可）</h3>
+            <h2>ポイント直接編集</h2>
+            <select id="admin-player-select"></select>
+            <input type="number" id="admin-points" placeholder="新しいポイント" min="0">
+            <button id="set-points" class="success">設定</button>
+        </div>
+        <div class="card">
+            <h3>操作履歴ダウンロード</h3>
             <button id="download-csv">CSVダウンロード</button>
-            <!-- 履歴テーブルは後ほどAPIから取得して表示可能だが、MVPではダウンロードのみ -->
         </div>
     </div>
 
     <script>
+        // グローバル変数
+        let selectedPlayerId = null;
+        let playersData = [];
+
         // タブ切り替え
         document.querySelectorAll('.tab-button').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -95,49 +112,116 @@
             });
         });
 
-        // プレイヤー一覧を取得してUIに反映
+        // プレイヤー一覧を取得（共通処理）
         async function fetchPlayers() {
             const res = await fetch('/api/players');
-            const players = await res.json();
-            // リスト表示
-            const list = document.getElementById('player-list');
-            list.innerHTML = players.map(p => `<li>${p.name} (${p.points} pt)</li>`).join('');
-            // セレクトボックスを更新
-            const selects = ['player-select', 'undo-player-select'];
-            selects.forEach(id => {
-                const sel = document.getElementById(id);
-                if (sel) {
-                    sel.innerHTML = players.map(p => `<option value="${p.id}">${p.name} (${p.points} pt)</option>`).join('');
-                }
-            });
-            return players;
+            playersData = await res.json();
+            return playersData;
         }
 
-        // ランキング表示
-        async function fetchLeaderboard() {
-            const res = await fetch('/api/leaderboard');
-            const top = await res.json();
-            const div = document.getElementById('leaderboard');
-            if (top.length === 0) {
-                div.innerHTML = '<p>まだプレイヤーがいません</p>';
+        // エントリー用プレイヤーリスト更新
+        function renderEntryList(players) {
+            const list = document.getElementById('player-list');
+            list.innerHTML = players.map(p => `
+                <li>
+                    ${p.name} (${p.points} pt)
+                    <button class="delete-btn" data-id="${p.id}">🗑️</button>
+                </li>
+            `).join('');
+            // 削除ボタンにイベントリスナー追加
+            document.querySelectorAll('#player-list .delete-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const playerId = btn.dataset.id;
+                    if (!confirm('このプレイヤーを削除しますか？')) return;
+                    const res = await fetch(`/api/players/${playerId}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        refresh();
+                    } else {
+                        alert('削除に失敗しました');
+                    }
+                });
+            });
+        }
+
+        // ポイント操作用プレイヤーリスト（選択可能）更新
+        function renderPointsList(players) {
+            const list = document.getElementById('points-player-list');
+            list.innerHTML = players.map(p => `
+                <li data-id="${p.id}" class="${selectedPlayerId == p.id ? 'selected' : ''}">
+                    ${p.name} (${p.points} pt)
+                </li>
+            `).join('');
+            // クリックで選択
+            document.querySelectorAll('#points-player-list li').forEach(li => {
+                li.addEventListener('click', () => {
+                    const id = li.dataset.id;
+                    selectedPlayerId = id;
+                    // ハイライト更新
+                    document.querySelectorAll('#points-player-list li').forEach(l => l.classList.remove('selected'));
+                    li.classList.add('selected');
+                    updateSelectedDisplay();
+                });
+            });
+        }
+
+        // 選択中プレイヤーの表示更新
+        function updateSelectedDisplay() {
+            const display = document.getElementById('selected-player-display');
+            if (selectedPlayerId) {
+                const player = playersData.find(p => p.id == selectedPlayerId);
+                display.textContent = `選択: ${player ? player.name : ''}`;
+            } else {
+                display.textContent = '選択: なし';
+            }
+        }
+
+        // ランキング表示（全プレイヤー、同順位処理）
+        function renderRanking(players) {
+            const container = document.getElementById('ranking-list');
+            if (players.length === 0) {
+                container.innerHTML = '<p>プレイヤーがいません</p>';
                 return;
             }
+            // ポイント順にソート
+            const sorted = [...players].sort((a, b) => b.points - a.points);
             let html = '';
-            top.forEach((p, idx) => {
-                let cls = '';
-                if (idx === 0) cls = 'first';
-                else if (idx === 1) cls = 'second';
-                else if (idx === 2) cls = 'third';
-                html += `<div class="leaderboard-item ${cls}">${idx+1}位: ${p.name} (${p.points} pt)</div>`;
+            let rank = 1;
+            let prevPoints = null;
+            sorted.forEach((p, index) => {
+                if (prevPoints !== null && p.points < prevPoints) {
+                    rank = index + 1;
+                }
+                const rankDisplay = p.has_activity ? rank : '-';
+                html += `
+                    <div class="rank-item">
+                        <span class="rank">${rankDisplay}位</span>
+                        <span class="name">${p.name}</span>
+                        <span class="points">${p.points} pt</span>
+                    </div>
+                `;
+                prevPoints = p.points;
             });
-            div.innerHTML = html;
+            container.innerHTML = html;
+        }
+
+        // 管理用プレイヤーセレクトボックス更新
+        function renderAdminSelect(players) {
+            const select = document.getElementById('admin-player-select');
+            select.innerHTML = players.map(p => `<option value="${p.id}">${p.name} (${p.points} pt)</option>`).join('');
+        }
+
+        // 全画面更新
+        async function refresh() {
+            const players = await fetchPlayers();
+            renderEntryList(players);
+            renderPointsList(players);
+            renderRanking(players);
+            renderAdminSelect(players);
+            updateSelectedDisplay();
         }
 
         // 初期化
-        async function refresh() {
-            await fetchPlayers();
-            await fetchLeaderboard();
-        }
         refresh();
         setInterval(refresh, 5000); // 5秒ごとに更新
 
@@ -150,25 +234,25 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({name})
             });
-            const data = await res.json();
             if (res.ok) {
                 document.getElementById('player-name').value = '';
                 refresh();
             } else {
+                const data = await res.json();
                 alert(data.error);
             }
         });
 
-        // ポイント送信
+        // ポイント送信（選択中のプレイヤー）
         document.getElementById('submit-points').addEventListener('click', async () => {
-            const player_id = document.getElementById('player-select').value;
+            if (!selectedPlayerId) return alert('プレイヤーを選択してください');
             const bet = parseInt(document.getElementById('bet').value);
             const multiplier = parseFloat(document.getElementById('multiplier').value);
-            if (!player_id || bet <= 0 || multiplier <= 0) return alert('正しい値を入力してください');
+            if (bet <= 0 || multiplier <= 0) return alert('正しい値を入力してください');
             const res = await fetch('/api/points', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({player_id, bet, multiplier})
+                body: JSON.stringify({player_id: selectedPlayerId, bet, multiplier})
             });
             const data = await res.json();
             if (res.ok) {
@@ -179,14 +263,13 @@
             }
         });
 
-        // 取り消し（Undo）
+        // やり直し（Undo）選択中のプレイヤー
         document.getElementById('undo-button').addEventListener('click', async () => {
-            const player_id = document.getElementById('undo-player-select').value;
-            if (!player_id) return alert('プレイヤーを選んでください');
+            if (!selectedPlayerId) return alert('プレイヤーを選択してください');
             const res = await fetch('/api/undo', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({player_id})
+                body: JSON.stringify({player_id: selectedPlayerId})
             });
             const data = await res.json();
             if (res.ok) {
@@ -197,17 +280,47 @@
             }
         });
 
-        // ゲームリセット
+        // ゲームリセット（全データ削除）
         document.getElementById('reset-game').addEventListener('click', async () => {
-            if (!confirm('本当にリセットしますか？全プレイヤーのポイントが消去されます。')) return;
+            if (!confirm('本当にリセットしますか？全プレイヤーが削除されます。')) return;
             const res = await fetch('/api/reset', {method: 'POST'});
             if (res.ok) {
                 alert('リセット完了');
+                selectedPlayerId = null;
                 refresh();
             }
         });
 
-        // CSVダウンロード（後で実装：履歴APIが必要）
+        // ポイントのみリセット
+        document.getElementById('clear-points').addEventListener('click', async () => {
+            if (!confirm('ポイントを初期値(5)に戻し、履歴をクリアしますか？')) return;
+            const res = await fetch('/api/clear', {method: 'POST'});
+            if (res.ok) {
+                alert('リセット完了');
+                selectedPlayerId = null;
+                refresh();
+            }
+        });
+
+        // ポイント直接設定
+        document.getElementById('set-points').addEventListener('click', async () => {
+            const playerId = document.getElementById('admin-player-select').value;
+            const points = parseInt(document.getElementById('admin-points').value);
+            if (!playerId || isNaN(points) || points < 0) return alert('正しい値を入力してください');
+            const res = await fetch(`/api/players/${playerId}/points`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({points})
+            });
+            if (res.ok) {
+                alert('ポイントを更新しました');
+                refresh();
+            } else {
+                alert('更新に失敗しました');
+            }
+        });
+
+        // CSVダウンロード
         document.getElementById('download-csv').addEventListener('click', () => {
             window.location.href = '/api/transactions/export';
         });
