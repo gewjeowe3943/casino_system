@@ -15,7 +15,10 @@
             border-radius: 8px; cursor: pointer;
         }
         .tab-button.active { background: #007bff; }
-        .tab-button img { width: 24px; height: 24px; }
+        .tab-button img {
+            filter: brightness(0) invert(1);
+            width: 42px; height: 42px;
+        }
         .tab-button span { display: inline; }
         @media (max-width: 400px) {
             .tab-button span { display: none; }
@@ -95,7 +98,7 @@
         }
         .player-block .points { font-size: 16px; color: #555; }
         .player-block .bet-input { 
-            width: 100%; margin-top: 5px; font-size: 16px; padding: 8px;
+            width: 100%; margin-top: 5px; font-size: 16px; padding: 14px;
             border: 1px solid #ccc; border-radius: 6px; text-align: center;
         }
         .odds-scroll {
@@ -411,7 +414,8 @@
                             ${p.name}
                         </div>
                         <div class="points">${p.points}pt</div>
-                        <input type="text" class="bet-input" id="bet-${p.id}" value="${betValue}" placeholder="掛け金" inputmode="numeric">
+                        <div style="font-size:14px; color:#666; margin-top:8px; margin-bottom:2px; text-align:left;">掛け金:</div>
+                        <input type="text" class="bet-input" id="bet-${p.id}" value="${betValue}" placeholder="例: 10" inputmode="numeric">
                     </div>
                 `;
             }).join('');
@@ -469,8 +473,8 @@
             const container = document.getElementById('odds-scroll');
             const odds = config.games?.[currentGame] || {};
             // 倍率の昇順にソート
-            const sorted = Object.entries(odds).sort((a, b) => a[1] - b[1]);
-            container.innerHTML = sorted.map(([name, mult]) => `
+            //const sorted = Object.entries(odds).sort((a, b) => a[1] - b[1]);
+            container.innerHTML = Object.entries(odds).map(([name, mult]) => `
                 <button class="odds-btn" data-mult="${mult}">${name}<br>(${mult}倍)</button>
             `).join('');
             // ボタンクリック
