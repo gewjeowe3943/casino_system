@@ -55,6 +55,27 @@
             background: none; border: none; padding: 8px; cursor: pointer; width: auto;
         }
         .icon-btn img { width: 28px; height: 28px; }
+        /* Undoボタンのスタイル改善 */
+        .icon-btn.undo-btn {
+            background: #6c757d;  /* グレーの背景 */
+            border-radius: 8px;
+            padding: 8px 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            color: white;
+            font-weight: bold;
+            border: 1px solid #5a6268;
+        }
+        .icon-btn.undo-btn img {
+            filter: brightness(0) invert(1); /* アイコンを白に（黒いアイコンの場合） */
+            width: 24px;
+            height: 24px;
+        }
+        .icon-btn.undo-btn:hover {
+            background: #5a6268;
+        }
         .checkbox-large { width: 28px; height: 28px; margin-right: 10px; }
         .player-blocks {
             display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;
@@ -171,9 +192,6 @@
                 <button id="game-poker" class="game-select" data-game="poker">ポーカー</button>
                 <button id="game-chinchiro" class="game-select" data-game="chinchiro">チンチロ</button>
                 <button id="game-blackjack" class="game-select" data-game="blackjack">ブラックジャック</button>
-                <div style="flex:1; text-align: right;">
-                    <button id="points-undo" class="icon-btn" style="width: auto;"><img src="/static/icons/undo.svg" alt="Undo"> Undo</button>
-                </div>
             </div>
             <div id="selected-players-block" class="player-blocks"></div>
             <div id="odds-container">
@@ -185,15 +203,28 @@
                     <button id="apply-custom-multiplier" class="success">適用</button>
                 </div>
             </div>
+            <div style="flex:1; text-align: right;">
+                <button id="points-undo" class="icon-btn undo-btn" style="width: auto; display: flex; align-items: center; gap: 5px;">
+                    <img src="/static/icons/undo.svg" alt="Undo" style="width: 24px; height: 24px;">
+                    <span>やり直し</span>
+                </button>
+            </div>
         </div>
     </div>
 
     <!-- ランキングタブ -->
     <div id="rank-section" class="tab-content">
         <div class="card">
-            <div style="display: flex; justify-content: space-between;">
-                <h2>🏆 ランキング 🏆</h2>
-                <button id="fullscreen-btn" class="icon-btn"><img src="/static/icons/full-screen.svg" alt="全画面"></button>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0;">🏆 ランキング 🏆</h2>
+                <div style="display: flex; gap: 10px;">
+                    <button id="toggle-ranking-visibility" class="icon-btn" style="width: auto; padding: 8px;">
+                        <img id="ranking-eye-icon" src="/static/icons/eye.svg" alt="表示/非表示" style="width: 28px; height: 28px;">
+                    </button>
+                    <button id="fullscreen-btn" class="icon-btn" style="width: auto; padding: 8px;">
+                        <img src="/static/icons/full-screen.svg" alt="全画面" style="width: 28px; height: 28px;">
+                    </button>
+                </div>
             </div>
             <div id="ranking-list"></div>
         </div>
@@ -211,7 +242,10 @@
             <select id="admin-player-select"></select>
             <input type="number" id="admin-points" placeholder="ポイント" min="0">
             <button id="set-points" class="success">設定</button>
-            <button id="admin-undo" class="icon-btn" style="width: auto; margin-top:10px;"><img src="/static/icons/undo.svg" alt="Undo"> Admin Undo</button>
+            <button id="admin-undo" class="icon-btn undo-btn" style="width: auto; display: flex; align-items: center; gap: 5px; margin-top:10px;">
+                <img src="/static/icons/undo.svg" alt="Undo" style="width: 24px; height: 24px;">
+                <span>やり直し</span>
+            </button>
         </div>
     </div>
 
@@ -220,6 +254,7 @@
         let config = { initialPoints: 100, games: {} };
         let allPlayers = [];
         let eyeState = {};           // true = 表示（目開き）, false = 非表示
+        let rankingHidden = false;
         let selectedPlayers = new Set();
         let currentGame = 'poker';
         let currentPointsPlayerId = null;
@@ -535,8 +570,17 @@
             }
         }
 
-        // ========== ランキング描画（目が開いている人のみ） ==========
+        // ========== ランキング描画（目が開いている人のみ + 非表示対応） ==========
         function renderRanking() {
+            if (rankingHidden) {
+                document.getElementById('ranking-list').innerHTML = `
+                    <div style="text-align: center; padding: 40px; font-size: 24px; color: #666;">
+                        ⚠️ ランキングは終了後に発表されます ⚠️
+                    </div>
+        `       ;
+                return;
+            }
+
             const numberedPlayers = getNumberedPlayers();
             const visiblePlayers = numberedPlayers.filter(p => eyeState[p.id] === true);
             visiblePlayers.sort((a, b) => b.points - a.points);
@@ -570,7 +614,7 @@
                         <span class="names">${namesStr}</span>
                         <span class="points">${pointsStr}pt</span>
                     </div>
-                `;
+        `       ;
                 i = j - 1;
             }
             document.getElementById('ranking-list').innerHTML = html || '<p>ランキング表示可能なプレイヤーがいません</p>';
@@ -650,6 +694,13 @@
             // Points Undo
             document.getElementById('points-undo').addEventListener('click', undoGame);
 
+            // ========== ランキング表示/非表示トグル ==========
+            document.getElementById('toggle-ranking-visibility').addEventListener('click', () => {
+                rankingHidden = !rankingHidden;
+                const eyeIcon = document.getElementById('ranking-eye-icon');
+                eyeIcon.src = rankingHidden ? '/static/icons/eye-closed.svg' : '/static/icons/eye.svg';
+                renderRanking(); // 再描画
+            });
             // 全画面
             document.getElementById('fullscreen-btn').addEventListener('click', () => {
                 if (!document.fullscreenElement) {
