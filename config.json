@@ -1,0 +1,29 @@
+{
+    "initialPoints": 100,
+    "games": {
+        "poker": {
+            "No Pair": 1,
+            "One Pair": 1.5,
+            "Two Pair": 2,
+            "Three of a Kind": 3,
+            "Straight": 4,
+            "Flush": 5,
+            "Full House": 6,
+            "Four of a Kind": 7,
+            "Straight Flush": 8,
+            "Royal Flush": 10
+        },
+        "chinchiro": {
+            "Pinzoro": 5,
+            "Zorome": 3,
+            "Hihumi": 2,
+            "Shigoro": 2,
+            "Others": 1
+        },
+        "blackjack": {
+            "Blackjack": 2.5,
+            "Win": 2,
+            "Push": 1
+        }
+    }
+}

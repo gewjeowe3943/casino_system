@@ -2,327 +2,573 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>カジノシステム</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>カジノシステム v2</title>
     <style>
+        * { box-sizing: border-box; }
         body { font-family: sans-serif; margin: 0; padding: 0; background: #f0f0f0; }
-        header { background: #333; color: white; padding: 10px; display: flex; flex-wrap: wrap; gap: 5px; }
-        .tab-button { background: #555; color: white; border: none; padding: 12px 16px; font-size: 16px; flex: 1; min-width: 80px; }
+        header { background: #333; color: white; padding: 5px; display: flex; flex-wrap: wrap; gap: 3px; }
+        .tab-button {
+            background: #555; color: white; border: none; padding: 8px 12px; font-size: 14px;
+            flex: 1 1 60px; display: flex; align-items: center; justify-content: center; gap: 5px;
+            border-radius: 8px; cursor: pointer;
+        }
         .tab-button.active { background: #007bff; }
-        .tab-content { display: none; padding: 15px; }
+        .tab-button img { width: 24px; height: 24px; }
+        .tab-button span { display: inline; }
+        @media (max-width: 400px) {
+            .tab-button span { display: none; }
+        }
+        .tab-content { display: none; padding: 10px; }
         .tab-content.active { display: block; }
-        .card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        input, select, button { font-size: 16px; padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
-        button { background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        input, select, button {
+            font-size: 18px; padding: 12px; margin: 5px 0; border-radius: 8px; border: 1px solid #ccc;
+            width: 100%; box-sizing: border-box;
+        }
+        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
         button:active { background: #0056b3; }
         .danger { background: #dc3545; }
         .success { background: #28a745; }
-        .player-list { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; }
-        .player-list li { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        .player-list li span:first-child {flex: 1; }
-
+        .player-list { list-style: none; padding: 0; margin: 0; }
+        .player-list li {
+            display: flex; align-items: center; gap: 10px; padding: 10px;
+            border-bottom: 1px solid #eee; font-size: 18px;
+        }
         .player-list li:last-child { border-bottom: none; }
-        .player-list li.selected { background: #cce5ff; }
-        .delete-btn { background: #dc3545; color: white; border: none; border-radius: 4px; padding: 5px 15px; cursor: pointer; margin-left: 10px; white-space: nowrap; font-size: 16px; min-width:45px; }
-        .rank-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; }
-        .rank { font-weight: bold; margin-right: 10px; }
-        .name { flex: 1; }
-        .points { font-weight: bold; }
-        .no-activity { color: #999; }
-        #selected-player-display { font-weight: bold; margin-bottom: 10px; }
+        .player-info { flex: 1; }
+        .icon-btn {
+            background: none; border: none; padding: 8px; cursor: pointer; width: auto;
+        }
+        .icon-btn img { width: 28px; height: 28px; }
+        .checkbox-large { width: 28px; height: 28px; margin-right: 10px; }
+        .player-blocks {
+            display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;
+        }
+        .player-block {
+            flex: 1 1 150px; background: #e9ecef; border-radius: 12px; padding: 10px;
+            text-align: center; cursor: pointer; border: 3px solid transparent;
+        }
+        .player-block.selected { border-color: #007bff; background: #cce5ff; }
+        .player-block .name { font-weight: bold; font-size: 18px; }
+        .player-block .points { font-size: 16px; color: #555; }
+        .player-block .bet-input { width: 100%; margin-top: 5px; font-size: 16px; padding: 8px; }
+        .odds-scroll {
+            display: flex; overflow-x: auto; gap: 8px; padding: 10px 0; white-space: nowrap;
+        }
+        .odds-btn {
+            background: #6c757d; color: white; border: none; padding: 12px 0;
+            border-radius: 30px; font-size: 16px; font-weight: bold; cursor: pointer;
+            flex: 0 0 auto; width: 110px; text-align: center;
+        }
+        .odds-btn:active { background: #5a6268; }
+        .ranking-entry {
+            display: flex; align-items: center; gap: 10px; font-size: 22px; padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .ranking-entry .rank { min-width: 60px; font-weight: bold; }
+        .ranking-entry .names { flex: 1; }
+        .ranking-entry .points { font-weight: bold; }
+        .crown { width: 32px; height: 32px; }
+        #toast {
+            position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+            background: #333; color: white; padding: 12px 24px; border-radius: 40px;
+            font-size: 16px; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        body.fullscreen-mode header { display: none; }
+        .game-select {
+            flex: 1 1 auto; background: #6c757d; margin: 0 2px;
+        }
     </style>
 </head>
 <body>
     <header>
-        <button class="tab-button active" data-tab="entry">エントリー</button>
-        <button class="tab-button" data-tab="points">ポイント</button>
-        <button class="tab-button" data-tab="ranking">ランキング</button>
-        <button class="tab-button" data-tab="management">管理</button>
+        <button class="tab-button active" data-tab="entry"><img src="/static/icons/entry.svg" alt=""><span>エントリー</span></button>
+        <button class="tab-button" data-tab="select"><img src="/static/icons/select.svg" alt=""><span>セレクト</span></button>
+        <button class="tab-button" data-tab="points"><img src="/static/icons/points.svg" alt=""><span>ポイント</span></button>
+        <button class="tab-button" data-tab="rank"><img src="/static/icons/rank.svg" alt=""><span>ランキング</span></button>
+        <button class="tab-button" data-tab="admin"><img src="/static/icons/admin.svg" alt=""><span>管理</span></button>
     </header>
 
-    <!-- エントリーセクション -->
+    <div id="toast"></div>
+
+    <!-- エントリータブ -->
     <div id="entry-section" class="tab-content active">
         <div class="card">
-            <h2>プレイヤーエントリー</h2>
+            <h2>プレイヤー登録</h2>
             <input type="text" id="player-name" placeholder="名前">
             <button id="add-player">追加</button>
         </div>
         <div class="card">
-            <h3>現在のプレイヤー</h3>
+            <h3>プレイヤー一覧</h3>
             <ul id="player-list" class="player-list"></ul>
         </div>
     </div>
 
-    <!-- ポイントセクション -->
-    <div id="points-section" class="tab-content">
+    <!-- セレクトタブ -->
+    <!-- セレクトタブ -->
+    <div id="select-section" class="tab-content">
         <div class="card">
-            <h2>プレイヤー一覧 (タップで選択)</h2>
-            <ul id="points-player-list" class="player-list"></ul>
-            <div id="selected-player-display">選択: なし</div>
-        </div>
-        <div class="card">
-            <h2>操作</h2>
-            <input type="number" id="bet" placeholder="掛け金" min="1" value="1">
-            <input type="number" id="multiplier" placeholder="倍率" step="0.1" min="1" value="1">
-            <button id="submit-points">送信</button>
-            <button id="undo-button" class="danger">やり直し</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <span id="selected-count" style="font-size: 18px; font-weight: bold; background: #e9ecef; padding: 8px 15px; border-radius: 20px;">選択: 0 人</span>
+                <button id="deselect-all" class="danger" style="width: auto; padding: 8px 20px; display: flex; align-items: center; gap: 8px;">
+                    <img src="/static/icons/deselect.svg" alt="" style="width: 20px; height: 20px;" onerror="this.style.display='none'">
+                    全解除
+                </button>
+            </div>
+            <ul id="select-player-list" class="player-list"></ul>
         </div>
     </div>
 
-    <!-- ランキングセクション -->
-    <div id="ranking-section" class="tab-content">
+    <!-- ポイントタブ -->
+    <div id="points-section" class="tab-content">
         <div class="card">
-            <h2>🏆 全プレイヤーランキング 🏆</h2>
+            <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px;">
+                <button id="game-poker" class="game-select" data-game="poker">ポーカー</button>
+                <button id="game-chinchiro" class="game-select" data-game="chinchiro">チンチロ</button>
+                <button id="game-blackjack" class="game-select" data-game="blackjack">ブラックジャック</button>
+                <div style="flex:1; text-align: right;">
+                    <button id="points-undo" class="icon-btn" style="width: auto;"><img src="/static/icons/undo.svg" alt="Undo"> Undo</button>
+                </div>
+            </div>
+            <div id="selected-players-block" class="player-blocks"></div>
+            <div id="odds-container">
+                <div id="odds-scroll" class="odds-scroll"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ランキングタブ -->
+    <div id="rank-section" class="tab-content">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between;">
+                <h2>🏆 ランキング 🏆</h2>
+                <button id="fullscreen-btn" class="icon-btn"><img src="/static/icons/full-screen.svg" alt="全画面"></button>
+            </div>
             <div id="ranking-list"></div>
         </div>
     </div>
 
-    <!-- 管理セクション -->
-    <div id="management-section" class="tab-content">
+    <!-- 管理タブ -->
+    <div id="admin-section" class="tab-content">
         <div class="card">
             <h2>ゲーム管理</h2>
-            <button id="reset-game" class="danger">全データ削除（次の客用）</button>
-            <button id="clear-points" class="danger">ポイントのみリセット（履歴クリア）</button>
+            <button id="reset-all-data" class="danger">全データ削除（プレイヤーも消える）</button>
+            <button id="reset-all-points" class="danger">全ポイントリセット（プレイヤー維持）</button>
         </div>
         <div class="card">
-            <h2>ポイント直接編集</h2>
+            <h2>直接ポイント編集</h2>
             <select id="admin-player-select"></select>
-            <input type="number" id="admin-points" placeholder="新しいポイント" min="0">
+            <input type="number" id="admin-points" placeholder="ポイント" min="0">
             <button id="set-points" class="success">設定</button>
-        </div>
-        <div class="card">
-            <h3>操作履歴ダウンロード</h3>
-            <button id="download-csv">CSVダウンロード</button>
+            <button id="admin-undo" class="icon-btn" style="width: auto; margin-top:10px;"><img src="/static/icons/undo.svg" alt="Undo"> Admin Undo</button>
         </div>
     </div>
 
     <script>
-        // グローバル変数
-        let selectedPlayerId = null;
-        let playersData = [];
+        // ========== グローバル変数 ==========
+        let config = { initialPoints: 100, games: {} };
+        let allPlayers = [];
+        let eyeState = {};           // true = 表示（目開き）, false = 非表示
+        let selectedPlayers = new Set();
+        let currentGame = 'poker';
+        let currentPointsPlayerId = null;
+        let gameUndoStack = [];
+        let adminUndoStack = [];
 
-        // タブ切り替え
-        document.querySelectorAll('.tab-button').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                btn.classList.add('active');
-                const tabName = btn.dataset.tab;
-                document.getElementById(tabName + '-section').classList.add('active');
-            });
-        });
-
-        // プレイヤー一覧を取得（共通処理）
-        async function fetchPlayers() {
-            const res = await fetch('/api/players');
-            playersData = await res.json();
-            return playersData;
+        // トースト表示
+        function showToast(msg, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.backgroundColor = type === 'error' ? '#dc3545' : '#333';
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 2000);
         }
 
-        // エントリー用プレイヤーリスト更新
-        function renderEntryList(players) {
+        // ========== 設定読み込み ==========
+        async function loadConfig() {
+            try {
+                const res = await fetch('/api/config');
+                config = await res.json();
+            } catch (e) {
+                console.error('config読み込み失敗', e);
+            }
+        }
+
+        // ========== プレイヤー取得 ==========
+        async function fetchPlayers() {
+            const res = await fetch('/api/players');
+            allPlayers = await res.json();
+            // 目の状態を初期化（未設定のプレイヤーは true = 表示）
+            allPlayers.forEach(p => {
+                if (eyeState[p.id] === undefined) eyeState[p.id] = true;
+            });
+            return allPlayers;
+        }
+
+        // ========== エントリーリスト描画 ==========
+        function renderEntryList() {
             const list = document.getElementById('player-list');
-            list.innerHTML = players.map(p => `
+            list.innerHTML = allPlayers.map(p => `
                 <li>
-                    ${p.name} (${p.points} pt)
-                    <button class="delete-btn" data-id="${p.id}">🗑️</button>
+                    <span class="player-info">${p.name} (${p.points}pt)</span>
+                    <button class="icon-btn eye-toggle" data-id="${p.id}">
+                        <img src="/static/icons/${eyeState[p.id] ? 'eye.svg' : 'eye-closed.svg'}" alt="eye">
+                    </button>
+                    <button class="icon-btn delete-player" data-id="${p.id}">
+                        <img src="/static/icons/trash.svg" alt="削除">
+                    </button>
                 </li>
             `).join('');
-            // 削除ボタンにイベントリスナー追加
-            document.querySelectorAll('#player-list .delete-btn').forEach(btn => {
+            // 目のトグル
+            document.querySelectorAll('.eye-toggle').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const pid = parseInt(btn.dataset.id);
+                    eyeState[pid] = !eyeState[pid];
+                    renderEntryList();
+                    renderRanking(); // ランキングも即時反映
+                });
+            });
+            // 削除ボタン
+            document.querySelectorAll('.delete-player').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     e.stopPropagation();
-                    const playerId = btn.dataset.id;
+                    const pid = parseInt(btn.dataset.id);
                     if (!confirm('このプレイヤーを削除しますか？')) return;
-                    const res = await fetch(`/api/players/${playerId}`, { method: 'DELETE' });
+                    const res = await fetch(`/api/players/${pid}`, { method: 'DELETE' });
                     if (res.ok) {
-                        refresh();
+                        selectedPlayers.delete(pid);
+                        delete eyeState[pid];
+                        await refreshPlayers();
+                        showToast('削除しました');
                     } else {
-                        alert('削除に失敗しました');
+                        showToast('削除失敗', 'error');
                     }
                 });
             });
         }
 
-        // ポイント操作用プレイヤーリスト（選択可能）更新
-        function renderPointsList(players) {
-            const list = document.getElementById('points-player-list');
-            list.innerHTML = players.map(p => `
-                <li data-id="${p.id}" class="${selectedPlayerId == p.id ? 'selected' : ''}">
-                    ${p.name} (${p.points} pt)
-                </li>
-            `).join('');
-            // クリックで選択
-            document.querySelectorAll('#points-player-list li').forEach(li => {
-                li.addEventListener('click', () => {
-                    const id = li.dataset.id;
-                    selectedPlayerId = id;
-                    // ハイライト更新
-                    document.querySelectorAll('#points-player-list li').forEach(l => l.classList.remove('selected'));
-                    li.classList.add('selected');
-                    updateSelectedDisplay();
+        // ========== セレクトタブ描画 ==========
+        function renderSelectTab() {
+            const list = document.getElementById('select-player-list');
+            list.innerHTML = allPlayers.map(p => {
+                const checked = selectedPlayers.has(p.id) ? 'checked' : '';
+                return `
+                    <li>
+                        <input type="checkbox" class="checkbox-large" data-id="${p.id}" ${checked}>
+                        <span class="player-info">${p.name} (${p.points}pt)</span>
+                    </li>
+                `;
+            }).join('');
+            // チェックボックス変更
+            document.querySelectorAll('#select-player-list input[type=checkbox]').forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    const pid = parseInt(cb.dataset.id);
+                    if (cb.checked) {
+                        selectedPlayers.add(pid);
+                    } else {
+                        selectedPlayers.delete(pid);
+                    }
+                    document.getElementById('selected-count').innerText = `選択: ${selectedPlayers.size} 人`;
+                    renderPointsBlocks();  // ポイントタブの表示を即時更新
+                });
+            });
+            document.getElementById('selected-count').innerText = `選択: ${selectedPlayers.size} 人`;
+        }
+
+        // ========== ポイントタブ：選択中プレイヤーのブロック描画 ==========
+        function renderPointsBlocks() {
+            const container = document.getElementById('selected-players-block');
+            const selectedArray = allPlayers.filter(p => selectedPlayers.has(p.id));
+            if (selectedArray.length === 0) {
+                container.innerHTML = '<p>セレクトタブでプレイヤーを選択してください</p>';
+                return;
+            }
+            container.innerHTML = selectedArray.map(p => {
+                const isSelected = (currentPointsPlayerId === p.id);
+                return `
+                    <div class="player-block ${isSelected ? 'selected' : ''}" data-id="${p.id}">
+                        <div class="name">${p.name}</div>
+                        <div class="points">${p.points}pt</div>
+                        <input type="number" class="bet-input" id="bet-${p.id}" placeholder="掛け金" min="1" value="1">
+                    </div>
+                `;
+            }).join('');
+            // ブロッククリックで選択
+            document.querySelectorAll('.player-block').forEach(block => {
+                block.addEventListener('click', () => {
+                    const pid = parseInt(block.dataset.id);
+                    currentPointsPlayerId = pid;
+                    document.querySelectorAll('.player-block').forEach(b => b.classList.remove('selected'));
+                    block.classList.add('selected');
                 });
             });
         }
 
-        // 選択中プレイヤーの表示更新
-        function updateSelectedDisplay() {
-            const display = document.getElementById('selected-player-display');
-            if (selectedPlayerId) {
-                const player = playersData.find(p => p.id == selectedPlayerId);
-                display.textContent = `選択: ${player ? player.name : ''}`;
-            } else {
-                display.textContent = '選択: なし';
-            }
+        // ========== 倍率ボタン描画（弱い順） ==========
+        function renderOddsButtons() {
+            const container = document.getElementById('odds-scroll');
+            const odds = config.games?.[currentGame] || {};
+            // 倍率の昇順にソート
+            const sorted = Object.entries(odds).sort((a, b) => a[1] - b[1]);
+            container.innerHTML = sorted.map(([name, mult]) => `
+                <button class="odds-btn" data-mult="${mult}">${name}<br>(${mult}倍)</button>
+            `).join('');
+            // ボタンクリック
+            document.querySelectorAll('.odds-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    if (!currentPointsPlayerId) {
+                        showToast('先にプレイヤーを選択してください', 'error');
+                        return;
+                    }
+                    const player = allPlayers.find(p => p.id === currentPointsPlayerId);
+                    if (!player) return;
+                    const betInput = document.getElementById(`bet-${currentPointsPlayerId}`);
+                    const bet = parseInt(betInput.value);
+                    if (isNaN(bet) || bet <= 0) {
+                        showToast('掛け金を正しく入力してください', 'error');
+                        return;
+                    }
+                    const mult = parseFloat(btn.dataset.mult);
+                    const oldPoints = player.points;
+                    const res = await fetch('/api/points', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ player_id: currentPointsPlayerId, bet, multiplier: mult })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        gameUndoStack.push({ playerId: currentPointsPlayerId, oldPoints, newPoints: data.new_points });
+                        await refreshPlayers();
+                        renderPointsBlocks();
+                        showToast(`${player.name} に ${bet*mult}pt 追加`);
+                    } else {
+                        showToast(data.error || 'エラー', 'error');
+                    }
+                });
+            });
         }
 
-        // ランキング表示（全プレイヤー、同順位処理）
-        function renderRanking(players) {
-            const container = document.getElementById('ranking-list');
-            if (players.length === 0) {
-                container.innerHTML = '<p>プレイヤーがいません</p>';
+        // ========== Points Undo ==========
+        async function undoGame() {
+            if (gameUndoStack.length === 0) {
+                showToast('取り消せる操作がありません');
                 return;
             }
-            // ポイント順にソート
-            const sorted = [...players].sort((a, b) => b.points - a.points);
-            let html = '';
-            let rank = 1;
-            let prevPoints = null;
-            sorted.forEach((p, index) => {
-                if (prevPoints !== null && p.points < prevPoints) {
-                    rank = index + 1;
-                }
-                const rankDisplay = p.has_activity ? rank : '-';
-                html += `
-                    <div class="rank-item">
-                        <span class="rank">${rankDisplay}位</span>
-                        <span class="name">${p.name}</span>
-                        <span class="points">${p.points} pt</span>
-                    </div>
-                `;
-                prevPoints = p.points;
-            });
-            container.innerHTML = html;
-        }
-
-        // 管理用プレイヤーセレクトボックス更新
-        function renderAdminSelect(players) {
-            const select = document.getElementById('admin-player-select');
-            select.innerHTML = players.map(p => `<option value="${p.id}">${p.name} (${p.points} pt)</option>`).join('');
-        }
-
-        // 全画面更新
-        async function refresh() {
-            const players = await fetchPlayers();
-            renderEntryList(players);
-            renderPointsList(players);
-            renderRanking(players);
-            renderAdminSelect(players);
-            updateSelectedDisplay();
-        }
-
-        // 初期化
-        refresh();
-        setInterval(refresh, 5000); // 5秒ごとに更新
-
-        // プレイヤー追加
-        document.getElementById('add-player').addEventListener('click', async () => {
-            const name = document.getElementById('player-name').value.trim();
-            if (!name) return alert('名前を入力してください');
-            const res = await fetch('/api/players', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name})
-            });
-            if (res.ok) {
-                document.getElementById('player-name').value = '';
-                refresh();
-            } else {
-                const data = await res.json();
-                alert(data.error);
-            }
-        });
-
-        // ポイント送信（選択中のプレイヤー）
-        document.getElementById('submit-points').addEventListener('click', async () => {
-            if (!selectedPlayerId) return alert('プレイヤーを選択してください');
-            const bet = parseInt(document.getElementById('bet').value);
-            const multiplier = parseFloat(document.getElementById('multiplier').value);
-            if (bet <= 0 || multiplier <= 0) return alert('正しい値を入力してください');
-            const res = await fetch('/api/points', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({player_id: selectedPlayerId, bet, multiplier})
-            });
-            const data = await res.json();
-            if (res.ok) {
-                alert(`更新完了！新しいポイント: ${data.new_points}`);
-                refresh();
-            } else {
-                alert(data.error);
-            }
-        });
-
-        // やり直し（Undo）選択中のプレイヤー
-        document.getElementById('undo-button').addEventListener('click', async () => {
-            if (!selectedPlayerId) return alert('プレイヤーを選択してください');
-            const res = await fetch('/api/undo', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({player_id: selectedPlayerId})
-            });
-            const data = await res.json();
-            if (res.ok) {
-                alert(`取り消しました。新しいポイント: ${data.new_points}`);
-                refresh();
-            } else {
-                alert(data.error);
-            }
-        });
-
-        // ゲームリセット（全データ削除）
-        document.getElementById('reset-game').addEventListener('click', async () => {
-            if (!confirm('本当にリセットしますか？全プレイヤーが削除されます。')) return;
-            const res = await fetch('/api/reset', {method: 'POST'});
-            if (res.ok) {
-                alert('リセット完了');
-                selectedPlayerId = null;
-                refresh();
-            }
-        });
-
-        // ポイントのみリセット
-        document.getElementById('clear-points').addEventListener('click', async () => {
-            if (!confirm('ポイントを初期値(5)に戻し、履歴をクリアしますか？')) return;
-            const res = await fetch('/api/clear', {method: 'POST'});
-            if (res.ok) {
-                alert('リセット完了');
-                selectedPlayerId = null;
-                refresh();
-            }
-        });
-
-        // ポイント直接設定
-        document.getElementById('set-points').addEventListener('click', async () => {
-            const playerId = document.getElementById('admin-player-select').value;
-            const points = parseInt(document.getElementById('admin-points').value);
-            if (!playerId || isNaN(points) || points < 0) return alert('正しい値を入力してください');
-            const res = await fetch(`/api/players/${playerId}/points`, {
+            const last = gameUndoStack.pop();
+            const res = await fetch(`/api/players/${last.playerId}/points`, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({points})
+                body: JSON.stringify({ points: last.oldPoints })
             });
             if (res.ok) {
-                alert('ポイントを更新しました');
-                refresh();
+                await refreshPlayers();
+                renderPointsBlocks();
+                showToast('取り消しました');
             } else {
-                alert('更新に失敗しました');
+                showToast('取り消し失敗', 'error');
             }
-        });
+        }
 
-        // CSVダウンロード
-        document.getElementById('download-csv').addEventListener('click', () => {
-            window.location.href = '/api/transactions/export';
+        // ========== ランキング描画（目が開いている人のみ） ==========
+        function renderRanking() {
+            const visiblePlayers = allPlayers.filter(p => eyeState[p.id] === true); // trueのみ表示
+            visiblePlayers.sort((a, b) => b.points - a.points);
+            let html = '';
+            let rank = 1;
+            for (let i = 0; i < visiblePlayers.length; i++) {
+                const current = visiblePlayers[i];
+                if (i > 0 && current.points === visiblePlayers[i-1].points) {
+                    // 同順位
+                } else {
+                    rank = i + 1;
+                }
+                if (rank > 3) break;
+
+                let samePoints = [];
+                let j = i;
+                while (j < visiblePlayers.length && visiblePlayers[j].points === current.points) {
+                    samePoints.push(visiblePlayers[j].name);
+                    j++;
+                }
+                const namesStr = samePoints.join(', ');
+                const pointsStr = current.points;
+                let crown = '';
+                if (rank === 1) crown = '<img src="/static/icons/crown-1st.svg" class="crown">';
+                else if (rank <= 3) crown = '<img src="/static/icons/crown-others.svg" class="crown">';
+
+                html += `
+                    <div class="ranking-entry">
+                        <span class="rank">${rank}位</span>
+                        ${crown}
+                        <span class="names">${namesStr}</span>
+                        <span class="points">${pointsStr}pt</span>
+                    </div>
+                `;
+                i = j - 1;
+            }
+            document.getElementById('ranking-list').innerHTML = html || '<p>ランキング表示可能なプレイヤーがいません</p>';
+        }
+
+        // ========== 管理用プレイヤーセレクト ==========
+        function renderAdminSelect() {
+            const sel = document.getElementById('admin-player-select');
+            sel.innerHTML = allPlayers.map(p => `<option value="${p.id}">${p.name} (${p.points}pt)</option>`).join('');
+        }
+
+        // ========== 全体リフレッシュ ==========
+        async function refreshPlayers() {
+            await fetchPlayers();
+            renderEntryList();
+            renderSelectTab();
+            renderPointsBlocks();
+            renderOddsButtons();
+            renderRanking();
+            renderAdminSelect();
+        }
+
+        // ========== 初期化 & イベント設定 ==========
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadConfig();
+            await refreshPlayers();
+
+            // タブ切り替え
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    btn.classList.add('active');
+                    const tab = btn.dataset.tab;
+                    document.getElementById(tab + '-section').classList.add('active');
+                });
+            });
+
+            // プレイヤー追加
+            document.getElementById('add-player').addEventListener('click', async () => {
+                const name = document.getElementById('player-name').value.trim();
+                if (!name) return showToast('名前を入力してください', 'error');
+                const res = await fetch('/api/players', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ name })
+                });
+                if (res.ok) {
+                    document.getElementById('player-name').value = '';
+                    await refreshPlayers();  // これで新しいプレイヤーに目が自動設定される（fetchPlayersで初期化）
+                    showToast('追加しました');
+                } else {
+                    const data = await res.json();
+                    showToast(data.error || 'エラー', 'error');
+                }
+            });
+
+            // 全解除
+            document.getElementById('deselect-all').addEventListener('click', () => {
+                selectedPlayers.clear();
+                renderSelectTab();
+                renderPointsBlocks();
+            });
+
+            // ゲーム切り替え
+            document.querySelectorAll('.game-select').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    currentGame = btn.dataset.game;
+                    renderOddsButtons();
+                });
+            });
+
+            // Points Undo
+            document.getElementById('points-undo').addEventListener('click', undoGame);
+
+            // 全画面
+            document.getElementById('fullscreen-btn').addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+            document.addEventListener('fullscreenchange', () => {
+                if (document.fullscreenElement) {
+                    document.body.classList.add('fullscreen-mode');
+                } else {
+                    document.body.classList.remove('fullscreen-mode');
+                }
+            });
+
+            // 管理：全データ削除
+            document.getElementById('reset-all-data').addEventListener('click', async () => {
+                if (!confirm('全てのプレイヤーとデータが削除されます。よろしいですか？')) return;
+                await fetch('/api/reset', { method: 'POST' });
+                selectedPlayers.clear();
+                eyeState = {};
+                gameUndoStack = [];
+                adminUndoStack = [];
+                await refreshPlayers();
+                showToast('全データを削除しました');
+            });
+
+            // 管理：全ポイントリセット
+            document.getElementById('reset-all-points').addEventListener('click', async () => {
+                if (!confirm('全プレイヤーのポイントを初期値に戻し、履歴をクリアします。よろしいですか？')) return;
+                await fetch('/api/reset-points', { method: 'POST' });
+                gameUndoStack = [];
+                await refreshPlayers();
+                showToast('ポイントをリセットしました');
+            });
+
+            // 管理：直接ポイント設定
+            document.getElementById('set-points').addEventListener('click', async () => {
+                const playerId = document.getElementById('admin-player-select').value;
+                const points = parseInt(document.getElementById('admin-points').value);
+                if (!playerId || isNaN(points) || points < 0) {
+                    showToast('正しいポイントを入力してください', 'error');
+                    return;
+                }
+                const player = allPlayers.find(p => p.id == playerId);
+                const oldPoints = player.points;
+                const res = await fetch(`/api/players/${playerId}/points`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ points })
+                });
+                if (res.ok) {
+                    adminUndoStack.push({ playerId: parseInt(playerId), oldPoints, newPoints: points });
+                    await refreshPlayers();
+                    showToast('ポイント更新');
+                } else {
+                    showToast('更新失敗', 'error');
+                }
+            });
+
+            // 管理：Admin Undo
+            document.getElementById('admin-undo').addEventListener('click', async () => {
+                if (adminUndoStack.length === 0) {
+                    showToast('取り消せる操作がありません');
+                    return;
+                }
+                const last = adminUndoStack.pop();
+                const res = await fetch(`/api/players/${last.playerId}/points`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ points: last.oldPoints })
+                });
+                if (res.ok) {
+                    await refreshPlayers();
+                    showToast('取り消しました');
+                } else {
+                    showToast('取り消し失敗', 'error');
+                }
+            });
+
+            // 定期更新（ランキングなど）
+            setInterval(async () => {
+                await fetchPlayers();
+                renderRanking();
+                renderPointsBlocks();  // ポイント表示も更新
+                renderSelectTab();      // 選択状態は維持されるが、ポイント表示更新のため
+            }, 5000);
         });
     </script>
 </body>

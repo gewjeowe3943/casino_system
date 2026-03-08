@@ -1,13 +1,15 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_from_directory
 import sqlite3
+import json
+import os
 
 app = Flask(__name__)
 DATABASE = 'casino.db'
+CONFIG_PATH = 'config.json'
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
-    # 外部キー制約を有効化
     conn.execute('PRAGMA foreign_keys = ON')
     return conn
 
@@ -17,7 +19,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS players (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT UNIQUE NOT NULL,
-                points INTEGER DEFAULT 5
+                points INTEGER DEFAULT 100
             )
         ''')
         conn.execute('''
@@ -34,15 +36,19 @@ def init_db():
 
 init_db()
 
-# 全プレイヤー取得（トランザクション有無を含む）
+# 設定ファイルを返す
+@app.route('/api/config')
+def get_config():
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH, encoding='utf-8') as f:
+            return jsonify(json.load(f))
+    return jsonify({"error": "config not found"}), 500
+
+# 全プレイヤー取得
 @app.route('/api/players', methods=['GET'])
 def get_players():
     with get_db() as conn:
-        players = conn.execute('''
-            SELECT p.id, p.name, p.points,
-                (SELECT COUNT(*) FROM transactions t WHERE t.player_id = p.id AND t.is_valid = 1) > 0 as has_activity
-            FROM players p
-        ''').fetchall()
+        players = conn.execute('SELECT id, name, points FROM players').fetchall()
     return jsonify([dict(p) for p in players])
 
 # プレイヤー追加
@@ -64,12 +70,11 @@ def add_player():
 @app.route('/api/players/<int:player_id>', methods=['DELETE'])
 def delete_player(player_id):
     with get_db() as conn:
-        # 外部キー制約で transactions は自動削除される（ON DELETE CASCADE）
         conn.execute('DELETE FROM players WHERE id = ?', (player_id,))
         conn.commit()
     return jsonify({'message': '削除しました'})
 
-# ポイント更新
+# ポイント更新（ゲーム用）
 @app.route('/api/points', methods=['POST'])
 def update_points():
     data = request.get_json()
@@ -101,12 +106,11 @@ def update_points():
 
     return jsonify({'message': 'ポイント更新完了', 'new_points': new_points})
 
-# 最新の操作を取り消し（Undo）
+# ゲーム用 Undo（最新の有効なトランザクションを取り消し）
 @app.route('/api/undo', methods=['POST'])
 def undo():
     data = request.get_json()
     player_id = data.get('player_id')
-
     if not player_id:
         return jsonify({'error': 'player_idが必要です'}), 400
 
@@ -126,74 +130,13 @@ def undo():
             SELECT SUM(change) FROM transactions
             WHERE player_id = ? AND is_valid = 1
         ''', (player_id,)).fetchone()[0] or 0
-        new_points = 5 + total
+        new_points = 100 + total  # 初期値は config から取るべきだが、後でフロントに合わせる
         conn.execute('UPDATE players SET points = ? WHERE id = ?', (new_points, player_id))
         conn.commit()
 
     return jsonify({'message': '取り消しました', 'new_points': new_points})
 
-# 全プレイヤーのランキング（ポイント順、トランザクション有無付き）
-@app.route('/api/ranking', methods=['GET'])
-def ranking():
-    with get_db() as conn:
-        players = conn.execute('''
-            SELECT p.id, p.name, p.points,
-                (SELECT COUNT(*) FROM transactions t WHERE t.player_id = p.id AND t.is_valid = 1) > 0 as has_activity
-            FROM players p
-            ORDER BY p.points DESC
-        ''').fetchall()
-    return jsonify([dict(p) for p in players])
-
-# 旧リーダーボード（互換性のため残すが、使用しない）
-@app.route('/api/leaderboard', methods=['GET'])
-def leaderboard():
-    with get_db() as conn:
-        top = conn.execute('SELECT name, points FROM players ORDER BY points DESC LIMIT 3').fetchall()
-    return jsonify([dict(t) for t in top])
-
-# ゲーム終了＆全データ削除
-@app.route('/api/reset', methods=['POST'])
-def reset():
-    with get_db() as conn:
-        conn.execute('DELETE FROM transactions')
-        conn.execute('DELETE FROM players')
-        conn.commit()
-    return jsonify({'message': 'リセット完了（次の客をどうぞ）'})
-
-# ポイントだけリセット（プレイヤーは残す）
-@app.route('/api/clear', methods=['POST'])
-def clear():
-    with get_db() as conn:
-        conn.execute('DELETE FROM transactions')
-        conn.execute('UPDATE players SET points = 5')
-        conn.commit()
-    return jsonify({'message': 'リセット完了'})
-
-# トランザクション履歴エクスポート
-@app.route('/api/transactions/export')
-def export_transactions():
-    with get_db() as conn:
-        rows = conn.execute('''
-            SELECT t.id, p.name, t.change, t.timestamp, t.is_valid
-            FROM transactions t
-            JOIN players p ON t.player_id = p.id
-            ORDER BY t.id DESC
-        ''').fetchall()
-    import csv
-    from io import StringIO
-    output = StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['ID', 'プレイヤー名', '増減', '日時', '有効'])
-    for r in rows:
-        writer.writerow([r['id'], r['name'], r['change'], r['timestamp'], '有効' if r['is_valid'] else '無効'])
-    response = app.response_class(
-        output.getvalue(),
-        mimetype='text/csv',
-        headers={'Content-Disposition': 'attachment;filename=transactions.csv'}
-    )
-    return response
-
-# プレイヤーのポイントを直接設定（管理用）
+# 直接ポイント編集（管理用、トランザクションは記録しない）
 @app.route('/api/players/<int:player_id>/points', methods=['PUT'])
 def set_player_points(player_id):
     data = request.get_json()
@@ -204,6 +147,32 @@ def set_player_points(player_id):
         conn.execute('UPDATE players SET points = ? WHERE id = ?', (points, player_id))
         conn.commit()
     return jsonify({'message': 'ポイントを更新しました'})
+
+# 全データ削除（次のゲーム用）
+@app.route('/api/reset', methods=['POST'])
+def reset():
+    with get_db() as conn:
+        conn.execute('DELETE FROM transactions')
+        conn.execute('DELETE FROM players')
+        conn.commit()
+    return jsonify({'message': '全データを削除しました'})
+
+# ポイントのみリセット（プレイヤーは残す、トランザクション削除）
+@app.route('/api/reset-points', methods=['POST'])
+def reset_points():
+    initial = 100  # config から取得したいが、ここでは仮置き
+    with get_db() as conn:
+        conn.execute('DELETE FROM transactions')
+        conn.execute('UPDATE players SET points = ?', (initial,))
+        conn.commit()
+    return jsonify({'message': 'ポイントをリセットしました'})
+
+# ランキング用（全プレイヤー取得）
+@app.route('/api/ranking', methods=['GET'])
+def ranking():
+    with get_db() as conn:
+        players = conn.execute('SELECT id, name, points FROM players ORDER BY points DESC').fetchall()
+    return jsonify([dict(p) for p in players])
 
 @app.route('/')
 def index():
