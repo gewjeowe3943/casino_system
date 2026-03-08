@@ -7,6 +7,13 @@ app = Flask(__name__)
 DATABASE = 'casino.db'
 CONFIG_PATH = 'config.json'
 
+try:
+    with open(CONFIG_PATH, encoding='utf-8') as f:
+        config_data = json.load(f)
+        INITIAL_POINTS = config_data.get('initialPoints', 100)
+except FileNotFoundError:
+    INITIAL_POINTS = 100
+
 def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
@@ -60,7 +67,8 @@ def add_player():
         return jsonify({'error': '名前が必要です'}), 400
     try:
         with get_db() as conn:
-            conn.execute('INSERT INTO players (name) VALUES (?)', (name,))
+            # 明示的に points を INITIAL_POINTS に設定
+            conn.execute('INSERT INTO players (name, points) VALUES (?, ?)', (name, INITIAL_POINTS))
             conn.commit()
         return jsonify({'message': f'{name} を追加しました'}), 201
     except sqlite3.IntegrityError:
@@ -130,7 +138,7 @@ def undo():
             SELECT SUM(change) FROM transactions
             WHERE player_id = ? AND is_valid = 1
         ''', (player_id,)).fetchone()[0] or 0
-        new_points = 100 + total  # 初期値は config から取るべきだが、後でフロントに合わせる
+        new_points = INITIAL_POINTS + total  # 初期値は config から取るべきだが、後でフロントに合わせる
         conn.execute('UPDATE players SET points = ? WHERE id = ?', (new_points, player_id))
         conn.commit()
 
@@ -160,10 +168,9 @@ def reset():
 # ポイントのみリセット（プレイヤーは残す、トランザクション削除）
 @app.route('/api/reset-points', methods=['POST'])
 def reset_points():
-    initial = 100  # config から取得したいが、ここでは仮置き
     with get_db() as conn:
         conn.execute('DELETE FROM transactions')
-        conn.execute('UPDATE players SET points = ?', (initial,))
+        conn.execute('UPDATE players SET points = ?', (INITIAL_POINTS,))
         conn.commit()
     return jsonify({'message': 'ポイントをリセットしました'})
 
