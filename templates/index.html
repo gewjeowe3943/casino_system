@@ -106,7 +106,6 @@
     </div>
 
     <!-- セレクトタブ -->
-    <!-- セレクトタブ -->
     <div id="select-section" class="tab-content">
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -175,6 +174,7 @@
         let currentPointsPlayerId = null;
         let gameUndoStack = [];
         let adminUndoStack = [];
+        let betValues = {};          // プレイヤーごとの掛け金を保持
 
         // トースト表示
         function showToast(msg, type = 'info') {
@@ -202,6 +202,8 @@
             // 目の状態を初期化（未設定のプレイヤーは true = 表示）
             allPlayers.forEach(p => {
                 if (eyeState[p.id] === undefined) eyeState[p.id] = true;
+                // betValues に未設定ならデフォルト値を設定（任意）
+                if (betValues[p.id] === undefined) betValues[p.id] = 1;
             });
             return allPlayers;
         }
@@ -240,6 +242,7 @@
                     if (res.ok) {
                         selectedPlayers.delete(pid);
                         delete eyeState[pid];
+                        delete betValues[pid]; // betValues からも削除
                         await refreshPlayers();
                         showToast('削除しました');
                     } else {
@@ -285,16 +288,19 @@
                 container.innerHTML = '<p>セレクトタブでプレイヤーを選択してください</p>';
                 return;
             }
+            // 各プレイヤーのブロックを生成（betValuesから値を取得）
             container.innerHTML = selectedArray.map(p => {
+                const betValue = betValues[p.id] !== undefined ? betValues[p.id] : 1;
                 const isSelected = (currentPointsPlayerId === p.id);
                 return `
                     <div class="player-block ${isSelected ? 'selected' : ''}" data-id="${p.id}">
                         <div class="name">${p.name}</div>
                         <div class="points">${p.points}pt</div>
-                        <input type="number" class="bet-input" id="bet-${p.id}" placeholder="掛け金" min="1" value="1">
+                        <input type="number" class="bet-input" id="bet-${p.id}" placeholder="掛け金" min="1" value="${betValue}">
                     </div>
                 `;
             }).join('');
+
             // ブロッククリックで選択
             document.querySelectorAll('.player-block').forEach(block => {
                 block.addEventListener('click', () => {
@@ -304,6 +310,24 @@
                     block.classList.add('selected');
                 });
             });
+
+            // 各入力フィールドの値変更を監視して betValues に保存
+            document.querySelectorAll('.bet-input').forEach(input => {
+                // 既存のイベントリスナーを避けるため、新しく追加する前に古いのを削除（簡易版）
+                input.removeEventListener('input', betInputHandler);
+                input.addEventListener('input', betInputHandler);
+            });
+        }
+
+        // 掛け金入力ハンドラ
+        function betInputHandler(e) {
+            const playerId = parseInt(e.target.id.split('-')[1]);
+            let val = parseInt(e.target.value);
+            if (isNaN(val) || val < 1) {
+                val = 1;
+                e.target.value = 1;
+            }
+            betValues[playerId] = val;
         }
 
         // ========== 倍率ボタン描画（弱い順） ==========
@@ -324,12 +348,8 @@
                     }
                     const player = allPlayers.find(p => p.id === currentPointsPlayerId);
                     if (!player) return;
-                    const betInput = document.getElementById(`bet-${currentPointsPlayerId}`);
-                    const bet = parseInt(betInput.value);
-                    if (isNaN(bet) || bet <= 0) {
-                        showToast('掛け金を正しく入力してください', 'error');
-                        return;
-                    }
+                    // betValues から現在の掛け金を取得
+                    const bet = betValues[currentPointsPlayerId] || 1;
                     const mult = parseFloat(btn.dataset.mult);
                     const oldPoints = player.points;
                     const res = await fetch('/api/points', {
@@ -341,7 +361,7 @@
                     if (res.ok) {
                         gameUndoStack.push({ playerId: currentPointsPlayerId, oldPoints, newPoints: data.new_points });
                         await refreshPlayers();
-                        renderPointsBlocks();
+                        renderPointsBlocks(); // ポイント表示更新、betValuesは保持
                         showToast(`${player.name} に ${bet*mult}pt 追加`);
                     } else {
                         showToast(data.error || 'エラー', 'error');
@@ -422,7 +442,7 @@
             await fetchPlayers();
             renderEntryList();
             renderSelectTab();
-            renderPointsBlocks();
+            renderPointsBlocks();  // betValues を保持したまま再描画
             renderOddsButtons();
             renderRanking();
             renderAdminSelect();
@@ -455,7 +475,7 @@
                 });
                 if (res.ok) {
                     document.getElementById('player-name').value = '';
-                    await refreshPlayers();  // これで新しいプレイヤーに目が自動設定される（fetchPlayersで初期化）
+                    await refreshPlayers();  // これで新しいプレイヤーに目が自動設定される
                     showToast('追加しました');
                 } else {
                     const data = await res.json();
@@ -505,6 +525,7 @@
                 eyeState = {};
                 gameUndoStack = [];
                 adminUndoStack = [];
+                betValues = {};  // betValues もクリア
                 await refreshPlayers();
                 showToast('全データを削除しました');
             });
@@ -514,6 +535,7 @@
                 if (!confirm('全プレイヤーのポイントを初期値に戻し、履歴をクリアします。よろしいですか？')) return;
                 await fetch('/api/reset-points', { method: 'POST' });
                 gameUndoStack = [];
+                // betValues はそのまま保持（掛け金はリセットしない）
                 await refreshPlayers();
                 showToast('ポイントをリセットしました');
             });
@@ -566,7 +588,7 @@
             setInterval(async () => {
                 await fetchPlayers();
                 renderRanking();
-                renderPointsBlocks();  // ポイント表示も更新
+                renderPointsBlocks();  // ポイント表示も更新（betValuesは保持）
                 renderSelectTab();      // 選択状態は維持されるが、ポイント表示更新のため
             }, 5000);
         });
