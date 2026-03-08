@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>カジノシステム v2</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon/favicon.svg">
     <style>
         * { box-sizing: border-box; }
         body { font-family: sans-serif; margin: 0; padding: 0; background: #f0f0f0; }
@@ -60,11 +61,28 @@
             display: flex; overflow-x: auto; gap: 8px; padding: 10px 0; white-space: nowrap;
         }
         .odds-btn {
-            background: #6c757d; color: white; border: none; padding: 12px 0;
+            background: #6c757d; color: white; border: none; padding: 24px 0;
             border-radius: 30px; font-size: 16px; font-weight: bold; cursor: pointer;
-            flex: 0 0 auto; width: 110px; text-align: center;
+            flex: 0 0 auto; width: 240px; text-align: center;
         }
         .odds-btn:active { background: #5a6268; }
+        .custom-multiplier-area {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .custom-multiplier-area input {
+            width: 120px;
+            padding: 8px;
+            margin: 0;
+        }
+        .custom-multiplier-area button {
+            width: auto;
+            padding: 8px 20px;
+            margin: 0;
+        }
         .ranking-entry {
             display: flex; align-items: center; gap: 10px; font-size: 22px; padding: 10px;
             border-bottom: 1px solid #ddd;
@@ -140,6 +158,12 @@
             <div id="selected-players-block" class="player-blocks"></div>
             <div id="odds-container">
                 <div id="odds-scroll" class="odds-scroll"></div>
+                <!-- カスタム倍率エリア -->
+                <div class="custom-multiplier-area">
+                    <span style="font-weight: bold;">カスタム倍率:</span>
+                    <input type="number" id="custom-multiplier" min="0.1" step="0.1" value="1" placeholder="倍率">
+                    <button id="apply-custom-multiplier" class="success">適用</button>
+                </div>
             </div>
         </div>
     </div>
@@ -407,6 +431,45 @@
             });
         }
 
+        // ========== カスタム倍率適用 ==========
+        async function applyCustomMultiplier() {
+            if (!currentPointsPlayerId) {
+                showToast('先にプレイヤーを選択してください', 'error');
+                return;
+            }
+            const player = allPlayers.find(p => p.id === currentPointsPlayerId);
+            if (!player) return;
+
+            const bet = betAmounts[currentPointsPlayerId] !== undefined ? betAmounts[currentPointsPlayerId] : 1;
+            if (bet <= 0) {
+                showToast('掛け金は1以上にしてください', 'error');
+                return;
+            }
+
+            const multiplierInput = document.getElementById('custom-multiplier');
+            const mult = parseFloat(multiplierInput.value);
+            if (isNaN(mult) || mult < 0.1) {
+                showToast('倍率は0.1以上を入力してください', 'error');
+                return;
+            }
+
+            const oldPoints = player.points;
+            const res = await fetch('/api/points', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ player_id: currentPointsPlayerId, bet, multiplier: mult })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                gameUndoStack.push({ playerId: currentPointsPlayerId, oldPoints, newPoints: data.new_points });
+                await refreshPlayers();
+                renderPointsBlocks();
+                showToast(`${player.name} に ${bet*mult}pt 追加`);
+            } else {
+                showToast(data.error || 'エラー', 'error');
+            }
+        }
+
         // ========== Points Undo ==========
         async function undoGame() {
             if (gameUndoStack.length === 0) {
@@ -534,6 +597,9 @@
                     renderOddsButtons();
                 });
             });
+
+            // カスタム倍率適用ボタン
+            document.getElementById('apply-custom-multiplier').addEventListener('click', applyCustomMultiplier);
 
             // Points Undo
             document.getElementById('points-undo').addEventListener('click', undoGame);
