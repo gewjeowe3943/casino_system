@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>カジノシステム v2</title>
+    <title>カジノシステム v2（番号表示付き）</title>
     <link rel="icon" type="image/svg+xml" href="/static/favicon/favicon.svg">
     <style>
         * { box-sizing: border-box; }
@@ -38,6 +38,19 @@
         }
         .player-list li:last-child { border-bottom: none; }
         .player-info { flex: 1; }
+        /* 番号表示用 */
+        .player-number {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 8px;
+        }
         .icon-btn {
             background: none; border: none; padding: 8px; cursor: pointer; width: auto;
         }
@@ -52,6 +65,13 @@
         }
         .player-block.selected { border-color: #007bff; background: #cce5ff; }
         .player-block .name { font-weight: bold; font-size: 18px; }
+        .player-block .name .player-number {
+            width: 24px;
+            height: 24px;
+            line-height: 24px;
+            font-size: 14px;
+            margin-right: 4px;
+        }
         .player-block .points { font-size: 16px; color: #555; }
         .player-block .bet-input { 
             width: 100%; margin-top: 5px; font-size: 16px; padding: 8px;
@@ -240,12 +260,27 @@
             return allPlayers;
         }
 
+        // ========== 番号付きプレイヤー情報を生成（配列の順番を固定番号とする） ==========
+        function getNumberedPlayers() {
+            // allPlayers を id 順（または登録順）にソートして番号を振る
+            // ここでは id の昇順とする（DBのAUTOINCREMENTなので登録順とほぼ一致）
+            const sorted = [...allPlayers].sort((a, b) => a.id - b.id);
+            return sorted.map((player, index) => ({
+                ...player,
+                displayNumber: index + 1
+            }));
+        }
+
         // ========== エントリーリスト描画 ==========
         function renderEntryList() {
+            const numberedPlayers = getNumberedPlayers();
             const list = document.getElementById('player-list');
-            list.innerHTML = allPlayers.map(p => `
+            list.innerHTML = numberedPlayers.map(p => `
                 <li>
-                    <span class="player-info">${p.name} (${p.points}pt)</span>
+                    <span class="player-info">
+                        <span class="player-number">${p.displayNumber}</span>
+                        ${p.name} (${p.points}pt)
+                    </span>
                     <button class="icon-btn eye-toggle" data-id="${p.id}">
                         <img src="/static/icons/${eyeState[p.id] ? 'eye.svg' : 'eye-closed.svg'}" alt="eye">
                     </button>
@@ -286,13 +321,17 @@
 
         // ========== セレクトタブ描画 ==========
         function renderSelectTab() {
+            const numberedPlayers = getNumberedPlayers();
             const list = document.getElementById('select-player-list');
-            list.innerHTML = allPlayers.map(p => {
+            list.innerHTML = numberedPlayers.map(p => {
                 const checked = selectedPlayers.has(p.id) ? 'checked' : '';
                 return `
                     <li>
                         <input type="checkbox" class="checkbox-large" data-id="${p.id}" ${checked}>
-                        <span class="player-info">${p.name} (${p.points}pt)</span>
+                        <span class="player-info">
+                            <span class="player-number">${p.displayNumber}</span>
+                            ${p.name} (${p.points}pt)
+                        </span>
                     </li>
                 `;
             }).join('');
@@ -314,8 +353,10 @@
 
         // ========== ポイントタブ：選択中プレイヤーのブロック描画 ==========
         function renderPointsBlocks() {
-            const container = document.getElementById('selected-players-block');
-            const selectedArray = allPlayers.filter(p => selectedPlayers.has(p.id));
+            const container = document.getElementById('selected-players-block'); // 先に宣言
+            if (!container) return; // 念のため
+            const numberedPlayers = getNumberedPlayers();
+            const selectedArray = numberedPlayers.filter(p => selectedPlayers.has(p.id));
             if (selectedArray.length === 0) {
                 container.innerHTML = '<p>セレクトタブでプレイヤーを選択してください</p>';
                 return;
@@ -326,7 +367,10 @@
                 const betValue = betAmounts[p.id] !== undefined ? betAmounts[p.id] : 1;
                 return `
                     <div class="player-block ${isSelected ? 'selected' : ''}" data-id="${p.id}">
-                        <div class="name">${p.name}</div>
+                        <div class="name">
+                            <span class="player-number">${p.displayNumber}</span>
+                            ${p.name}
+                        </div>
                         <div class="points">${p.points}pt</div>
                         <input type="text" class="bet-input" id="bet-${p.id}" value="${betValue}" placeholder="掛け金" inputmode="numeric">
                     </div>
@@ -493,7 +537,8 @@
 
         // ========== ランキング描画（目が開いている人のみ） ==========
         function renderRanking() {
-            const visiblePlayers = allPlayers.filter(p => eyeState[p.id] === true);
+            const numberedPlayers = getNumberedPlayers();
+            const visiblePlayers = numberedPlayers.filter(p => eyeState[p.id] === true);
             visiblePlayers.sort((a, b) => b.points - a.points);
             let html = '';
             let rank = 1;
@@ -509,7 +554,7 @@
                 let samePoints = [];
                 let j = i;
                 while (j < visiblePlayers.length && visiblePlayers[j].points === current.points) {
-                    samePoints.push(visiblePlayers[j].name);
+                    samePoints.push(`#${visiblePlayers[j].displayNumber} ${visiblePlayers[j].name}`);
                     j++;
                 }
                 const namesStr = samePoints.join(', ');
@@ -531,10 +576,11 @@
             document.getElementById('ranking-list').innerHTML = html || '<p>ランキング表示可能なプレイヤーがいません</p>';
         }
 
-        // ========== 管理用プレイヤーセレクト ==========
+        // ========== 管理用プレイヤーセレクト（番号付き） ==========
         function renderAdminSelect() {
+            const numberedPlayers = getNumberedPlayers();
             const sel = document.getElementById('admin-player-select');
-            sel.innerHTML = allPlayers.map(p => `<option value="${p.id}">${p.name} (${p.points}pt)</option>`).join('');
+            sel.innerHTML = numberedPlayers.map(p => `<option value="${p.id}">#${p.displayNumber} ${p.name} (${p.points}pt)</option>`).join('');
         }
 
         // ========== 全体リフレッシュ ==========
