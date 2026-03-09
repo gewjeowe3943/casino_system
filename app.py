@@ -138,7 +138,7 @@ def undo():
             SELECT SUM(change) FROM transactions
             WHERE player_id = ? AND is_valid = 1
         ''', (player_id,)).fetchone()[0] or 0
-        new_points = INITIAL_POINTS + total  # 初期値は config から取るべきだが、後でフロントに合わせる
+        new_points = INITIAL_POINTS + total
         conn.execute('UPDATE players SET points = ? WHERE id = ?', (new_points, player_id))
         conn.commit()
 
