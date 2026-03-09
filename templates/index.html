@@ -7,7 +7,12 @@
     <link rel="icon" type="image/svg+xml" href="/static/favicon/favicon.svg">
     <style>
         * { box-sizing: border-box; }
-        body { font-family: sans-serif; margin: 0; padding: 0; background: #f0f0f0; }
+        body { font-family: sans-serif; margin: 0; padding: 0; background: #f0f0f0;
+            background-image: url("/static/icons/back-sea.jpg");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+         }
         header { background: #333; color: white; padding: 5px; display: flex; flex-wrap: wrap; gap: 3px; }
         .tab-button {
             background: #555; color: white; border: none; padding: 8px 12px; font-size: 14px;
@@ -25,7 +30,12 @@
         }
         .tab-content { display: none; padding: 10px; }
         .tab-content.active { display: block; }
-        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .card {
+            background-image: url("/static/icons/back-map.png");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat; 
+            border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         input, select, button {
             font-size: 18px; padding: 12px; margin: 5px 0; border-radius: 8px; border: 1px solid #ccc;
             width: 100%; box-sizing: border-box;
@@ -129,12 +139,13 @@
         }
         .ranking-entry {
             display: flex; align-items: center; gap: 10px; font-size: 22px; padding: 10px;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid #ddd; font-size: 64px;
         }
         .ranking-entry .rank { min-width: 60px; font-weight: bold; }
         .ranking-entry .names { flex: 1; }
         .ranking-entry .points { font-weight: bold; }
-        .crown { width: 32px; height: 32px; }
+        .crown { width: 128px; height: 128px; }
+        #ranking-display{ font-size: 48px }
         #toast {
             position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
             background: #333; color: white; padding: 12px 24px; border-radius: 40px;
@@ -223,17 +234,21 @@
     <div id="rank-section" class="tab-content">
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h2 style="margin: 0;">🏆 ランキング 🏆</h2>
+                <h2 id="ranking-display" style="margin: 0;">
+                     <img src="/static/icons/bone.svg" alt="bone" style="width: 64px; height: 64px;"> ランキング <img src="/static/icons/bone.svg" alt="bone" style="width: 64px; height: 64px;">
+                </h2>
+            </div>
+            <div id="ranking-list"></div>
+        </div>
                 <div style="display: flex; gap: 10px;">
-                    <button id="toggle-ranking-visibility" class="icon-btn" style="width: auto; padding: 8px;">
-                        <img id="ranking-eye-icon" src="/static/icons/eye.svg" alt="表示/非表示" style="width: 28px; height: 28px;">
-                    </button>
                     <button id="fullscreen-btn" class="icon-btn" style="width: auto; padding: 8px;">
                         <img src="/static/icons/full-screen.svg" alt="全画面" style="width: 28px; height: 28px;">
                     </button>
+                    <button id="toggle-ranking-visibility" class="icon-btn" style="width: auto; padding: 8px;">
+                        <img id="ranking-eye-icon" src="/static/icons/eye.svg" alt="表示/非表示" style="width: 28px; height: 28px;">
+                    </button>
                 </div>
             </div>
-            <div id="ranking-list"></div>
         </div>
     </div>
 
@@ -582,8 +597,10 @@
         function renderRanking() {
             if (rankingHidden) {
                 document.getElementById('ranking-list').innerHTML = `
-                    <div style="text-align: center; padding: 40px; font-size: 24px; color: #666;">
+                    <div style="text-align: center; padding: 40px; font-size: 60px; color: #000000;">
                         ⚠️ ランキングは終了後に発表されます ⚠️
+                        <p>-</p>
+                        <p>-</p>
                     </div>
         `       ;
                 return;
@@ -617,8 +634,8 @@
 
                 html += `
                     <div class="ranking-entry">
-                        <span class="rank">${rank}位</span>
                         ${crown}
+                        <span class="rank">${rank}位</span>
                         <span class="names">${namesStr}</span>
                         <span class="points">${pointsStr}pt</span>
                     </div>
