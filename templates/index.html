@@ -7,50 +7,117 @@
     <link rel="icon" type="image/svg+xml" href="/static/favicon/favicon.svg">
     <style>
         * { box-sizing: border-box; }
-        body { font-family: sans-serif; margin: 0; padding: 0; background: #f0f0f0;
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #0a2f44; /* 背景画像の色に合わせたダークブルー */
             background-image: url("/static/icons/back-sea.jpg");
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-attachment: fixed; /* スクロールしても背景固定（お好みで） */
+        }
+        header {
+            background: #333;
+            color: white;
+            padding: 5px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+        }
+        .tab-button {
+            background: #555;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            font-size: 24px;
+            flex: 1 1 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .tab-button.active {
+            background: #007bff;
+        }
+        .tab-button img {
+            filter: brightness(0) invert(1);
+            width: 42px;
+            height: 42px;
+        }
+        .tab-button span {
+            display: inline;
+        }
+        @media (max-width: 400px) {
+            .tab-button span {
+                display: none;
+            }
+        }
+        .tab-content {
+            display: none;
+            padding: 10px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .card {
+            background-image: url("/static/icons/back-map.jpg");
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-         }
-        header { background: #333; color: white; padding: 5px; display: flex; flex-wrap: wrap; gap: 3px; }
-        .tab-button {
-            background: #555; color: white; border: none; padding: 8px 12px; font-size: 14px;
-            flex: 1 1 60px; display: flex; align-items: center; justify-content: center; gap: 5px;
-            border-radius: 8px; cursor: pointer;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        .tab-button.active { background: #007bff; }
-        .tab-button img {
-            filter: brightness(0) invert(1);
-            width: 42px; height: 42px;
-        }
-        .tab-button span { display: inline; }
-        @media (max-width: 400px) {
-            .tab-button span { display: none; }
-        }
-        .tab-content { display: none; padding: 10px; }
-        .tab-content.active { display: block; }
-        .card {
-            background-image: url("/static/icons/back-map.png");
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat; 
-            border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         input, select, button {
-            font-size: 18px; padding: 12px; margin: 5px 0; border-radius: 8px; border: 1px solid #ccc;
-            width: 100%; box-sizing: border-box;
+            font-size: 24px;
+            padding: 12px;
+            margin: 5px 0;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            width: 100%;
+            box-sizing: border-box;
         }
-        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
-        button:active { background: #0056b3; }
-        .danger { background: #dc3545; }
-        .success { background: #28a745; }
-        .player-list { list-style: none; padding: 0; margin: 0; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:active {
+            background: #0056b3;
+        }
+        .danger {
+            background: #dc3545;
+        }
+        .success {
+            background: #28a745;
+        }
+        .player-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 24px;
+        }
         .player-list li {
-            display: flex; align-items: center; gap: 10px; padding: 10px;
-            border-bottom: 1px solid #eee; font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 24px;
         }
-        .player-list li:last-child { border-bottom: none; }
-        .player-info { flex: 1; }
+        .player-list li:last-child {
+            border-bottom: none;
+        }
+        .player-info {
+            flex: 1;
+        }
         /* 番号表示用 */
         .player-number {
             display: inline-block;
@@ -65,12 +132,19 @@
             margin-right: 8px;
         }
         .icon-btn {
-            background: none; border: none; padding: 8px; cursor: pointer; width: auto;
+            background: none;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            width: auto;
         }
-        .icon-btn img { width: 28px; height: 28px; }
+        .icon-btn img {
+            width: 32px;
+            height: 32px;
+        }
         /* Undoボタンのスタイル改善 */
         .icon-btn.undo-btn {
-            background: #6c757d;  /* グレーの背景 */
+            background: #6c757d;
             border-radius: 8px;
             padding: 8px 12px;
             display: inline-flex;
@@ -82,44 +156,85 @@
             border: 1px solid #5a6268;
         }
         .icon-btn.undo-btn img {
-            filter: brightness(0) invert(1); /* アイコンを白に（黒いアイコンの場合） */
-            width: 24px;
-            height: 24px;
+            filter: brightness(0) invert(1);
+            width: 48px;
+            height: 48px;
         }
         .icon-btn.undo-btn:hover {
             background: #5a6268;
         }
-        .checkbox-large { width: 28px; height: 28px; margin-right: 10px; }
+        .checkbox-large {
+            width: 48px;
+            height: 48px;
+            margin-right: 10px;
+        }
         .player-blocks {
-            display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 22px;
+            margin-bottom: 15px;
         }
         .player-block {
-            flex: 1 1 150px; background: #e9ecef; border-radius: 12px; padding: 10px;
-            text-align: center; cursor: pointer; border: 3px solid transparent;
+            flex: 1 1 150px;
+            background: #e9ecef;
+            border-radius: 12px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            border: 3px solid transparent;
         }
-        .player-block.selected { border-color: #007bff; background: #cce5ff; }
-        .player-block .name { font-weight: bold; font-size: 18px; }
+        .player-block.selected {
+            border-color: #007bff;
+            background: #cce5ff;
+        }
+        .player-block .name {
+            font-weight: bold;
+            font-size: 24px;
+        }
         .player-block .name .player-number {
             width: 24px;
             height: 24px;
             line-height: 24px;
-            font-size: 14px;
+            font-size: 24px;
             margin-right: 4px;
         }
-        .player-block .points { font-size: 16px; color: #555; }
-        .player-block .bet-input { 
-            width: 100%; margin-top: 5px; font-size: 16px; padding: 14px;
-            border: 1px solid #ccc; border-radius: 6px; text-align: center;
+        .player-block .points {
+            font-size: 24px;
+            color: #555;
+        }
+        .player-block .bet-input {
+            width: 100%;
+            margin-top: 5px;
+            font-size: 24px;
+            padding: 14px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            text-align: center;
         }
         .odds-scroll {
-            display: flex; overflow-x: auto; gap: 8px; padding: 10px 0; white-space: nowrap;
+            display: flex;
+            overflow-x: auto;
+            gap: 8px;
+            padding: 10px 0;
+            white-space: nowrap;
         }
         .odds-btn {
-            background: #6c757d; color: white; border: none; padding: 24px 0;
-            border-radius: 30px; font-size: 16px; font-weight: bold; cursor: pointer;
-            flex: 0 0 auto; width: 240px; text-align: center;
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 24px 0;
+            border-radius: 30px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            flex: 0 0 auto;
+            width: 240px;
+            text-align: center;
         }
-        .odds-btn:active { background: #5a6268; }
+        .odds-btn:active {
+            background: #5a6268;
+        }
         .custom-multiplier-area {
             margin-top: 15px;
             display: flex;
@@ -138,26 +253,59 @@
             margin: 0;
         }
         .ranking-entry {
-            display: flex; align-items: center; gap: 10px; font-size: 22px; padding: 10px;
-            border-bottom: 1px solid #ddd; font-size: 64px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 64px;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
         }
-        .ranking-entry .rank { min-width: 60px; font-weight: bold; }
-        .ranking-entry .names { flex: 1; }
-        .ranking-entry .points { font-weight: bold; }
-        .crown { width: 128px; height: 128px; }
-        #ranking-display{ font-size: 48px }
+        .ranking-entry .rank {
+            min-width: 60px;
+            font-weight: bold;
+        }
+        .ranking-entry .names {
+            flex: 1;
+        }
+        .ranking-entry .points {
+            font-weight: bold;
+        }
+        .crown {
+            width: 128px;
+            height: 128px;
+        }
+        #ranking-display {
+            font-size: 48px;
+        }
         #toast {
-            position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
-            background: #333; color: white; padding: 12px 24px; border-radius: 40px;
-            font-size: 16px; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 24px;
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
-        body.fullscreen-mode header { display: none; }
+        body.fullscreen-mode header {
+            display: none;
+        }
         .game-select {
-            flex: 1 1 auto; background: #6c757d; margin: 0 2px;
+            flex: 1 1 auto;
+            background: #6c757d;
+            margin: 0 2px;
         }
         /* セレクトタブの全解除ボタン */
         #deselect-all {
-            width: auto; padding: 8px 20px; display: flex; align-items: center; gap: 8px;
+            width: auto;
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
     </style>
 </head>
@@ -189,7 +337,7 @@
     <div id="select-section" class="tab-content">
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <span id="selected-count" style="font-size: 18px; font-weight: bold; background: #e9ecef; padding: 8px 15px; border-radius: 20px;">選択: 0 人</span>
+                <span id="selected-count" style="font-size: 24px; font-weight: bold; background: #e9ecef; padding: 8px 15px; border-radius: 20px;">選択: 0 人</span>
                 <button id="deselect-all" class="danger" style="width: auto; padding: 8px 20px; display: flex; align-items: center; gap: 8px;">
                     <img src="/static/icons/deselect.svg" alt="" style="width: 20px; height: 20px;" onerror="this.style.display='none'">
                     全解除
@@ -235,11 +383,8 @@
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h2 id="ranking-display" style="margin: 0;">
-                     <img src="/static/icons/bone.svg" alt="bone" style="width: 64px; height: 64px;"> ランキング <img src="/static/icons/bone.svg" alt="bone" style="width: 64px; height: 64px;">
+                    <img src="/static/icons/bone.svg" alt="bone" style="width: 64px; height: 64px;"> ランキング <img src="/static/icons/bone.svg" alt="bone" style="width: 64px; height: 64px;">
                 </h2>
-            </div>
-            <div id="ranking-list"></div>
-        </div>
                 <div style="display: flex; gap: 10px;">
                     <button id="fullscreen-btn" class="icon-btn" style="width: auto; padding: 8px;">
                         <img src="/static/icons/full-screen.svg" alt="全画面" style="width: 28px; height: 28px;">
@@ -249,6 +394,7 @@
                     </button>
                 </div>
             </div>
+            <div id="ranking-list"></div>
         </div>
     </div>
 
@@ -285,6 +431,10 @@
         // 各プレイヤーの掛け金を保持するオブジェクト { playerId: 値 }
         let betAmounts = {};
 
+        // 編集中のプレイヤーを追跡（フォーカス問題対策）
+        let editingPlayerId = null;
+        let isEditing = false;
+
         // トースト表示
         function showToast(msg, type = 'info') {
             const toast = document.getElementById('toast');
@@ -319,8 +469,6 @@
 
         // ========== 番号付きプレイヤー情報を生成（配列の順番を固定番号とする） ==========
         function getNumberedPlayers() {
-            // allPlayers を id 順（または登録順）にソートして番号を振る
-            // ここでは id の昇順とする（DBのAUTOINCREMENTなので登録順とほぼ一致）
             const sorted = [...allPlayers].sort((a, b) => a.id - b.id);
             return sorted.map((player, index) => ({
                 ...player,
@@ -366,7 +514,7 @@
                     if (res.ok) {
                         selectedPlayers.delete(pid);
                         delete eyeState[pid];
-                        delete betAmounts[pid];  // 掛け金も削除
+                        delete betAmounts[pid];
                         await refreshPlayers();
                         showToast('削除しました');
                     } else {
@@ -392,7 +540,6 @@
                     </li>
                 `;
             }).join('');
-            // チェックボックス変更
             document.querySelectorAll('#select-player-list input[type=checkbox]').forEach(cb => {
                 cb.addEventListener('change', (e) => {
                     const pid = parseInt(cb.dataset.id);
@@ -402,7 +549,7 @@
                         selectedPlayers.delete(pid);
                     }
                     document.getElementById('selected-count').innerText = `選択: ${selectedPlayers.size} 人`;
-                    renderPointsBlocks();  // ポイントタブの表示を即時更新
+                    renderPointsBlocks();
                 });
             });
             document.getElementById('selected-count').innerText = `選択: ${selectedPlayers.size} 人`;
@@ -410,8 +557,8 @@
 
         // ========== ポイントタブ：選択中プレイヤーのブロック描画 ==========
         function renderPointsBlocks() {
-            const container = document.getElementById('selected-players-block'); // 先に宣言
-            if (!container) return; // 念のため
+            const container = document.getElementById('selected-players-block');
+            if (!container) return;
             const numberedPlayers = getNumberedPlayers();
             const selectedArray = numberedPlayers.filter(p => selectedPlayers.has(p.id));
             if (selectedArray.length === 0) {
@@ -420,7 +567,6 @@
             }
             container.innerHTML = selectedArray.map(p => {
                 const isSelected = (currentPointsPlayerId === p.id);
-                // 現在の掛け金を取得（なければ1）
                 const betValue = betAmounts[p.id] !== undefined ? betAmounts[p.id] : 1;
                 return `
                     <div class="player-block ${isSelected ? 'selected' : ''}" data-id="${p.id}">
@@ -429,39 +575,39 @@
                             ${p.name}
                         </div>
                         <div class="points">${p.points}pt</div>
-                        <div style="font-size:14px; color:#666; margin-top:8px; margin-bottom:2px; text-align:left;">掛け金:</div>
+                        <div style="font-size:24px; color:#666; margin-top:8px; margin-bottom:2px; text-align:left;">掛け金:</div>
                         <input type="text" class="bet-input" id="bet-${p.id}" value="${betValue}" placeholder="例: 10" inputmode="numeric">
                     </div>
                 `;
             }).join('');
 
-            // 各入力フィールドにイベント設定
+            // 各入力フィールドにイベント設定（フォーカス管理を含む）
             selectedArray.forEach(p => {
                 const input = document.getElementById(`bet-${p.id}`);
                 if (input) {
-                    // 数字以外を除去する処理
-                    input.addEventListener('input', (e) => {
-                        let val = e.target.value.replace(/[^0-9]/g, ''); // 数字以外削除
-                        if (val === '') {
-                            // 空の場合は状態から削除（後でデフォルト1として扱う）
-                            delete betAmounts[p.id];
-                        } else {
-                            // 数値に変換して保存
-                            betAmounts[p.id] = parseInt(val, 10);
-                        }
-                        // 表示を整える（空でなければ数値を表示）
-                        if (val === '') {
-                            e.target.value = '';
-                        } else {
-                            e.target.value = betAmounts[p.id];
-                        }
+                    // フォーカスイベントで編集中フラグを設定
+                    input.addEventListener('focus', () => {
+                        editingPlayerId = p.id;
+                        isEditing = true;
+                    });
+                    input.addEventListener('blur', () => {
+                        editingPlayerId = null;
+                        isEditing = false;
                     });
 
-                    // フォーカスが外れたときの処理（必要なら）
-                    input.addEventListener('blur', (e) => {
-                        let val = e.target.value;
+                    // 数字以外を除去
+                    input.addEventListener('input', (e) => {
+                        let val = e.target.value.replace(/[^0-9]/g, '');
                         if (val === '') {
-                            // 空ならデフォルト1を設定（ユーザーが空のままフォーカスを外した場合）
+                            delete betAmounts[p.id];
+                        } else {
+                            betAmounts[p.id] = parseInt(val, 10);
+                        }
+                        e.target.value = val === '' ? '' : betAmounts[p.id];
+                    });
+
+                    input.addEventListener('blur', (e) => {
+                        if (e.target.value === '') {
                             betAmounts[p.id] = 1;
                             e.target.value = 1;
                         }
@@ -472,7 +618,6 @@
             // ブロッククリックで選択
             document.querySelectorAll('.player-block').forEach(block => {
                 block.addEventListener('click', (e) => {
-                    // クリックされた要素が入力フィールドでなければブロック選択
                     if (e.target.tagName !== 'INPUT') {
                         const pid = parseInt(block.dataset.id);
                         currentPointsPlayerId = pid;
@@ -481,18 +626,23 @@
                     }
                 });
             });
+
+            // 編集中のプレイヤーがいる場合、その入力フィールドにフォーカスを戻す
+            if (editingPlayerId) {
+                const inputToFocus = document.getElementById(`bet-${editingPlayerId}`);
+                if (inputToFocus) {
+                    inputToFocus.focus();
+                }
+            }
         }
 
-        // ========== 倍率ボタン描画（弱い順） ==========
+        // ========== 倍率ボタン描画（配列対応） ==========
         function renderOddsButtons() {
             const container = document.getElementById('odds-scroll');
-            const odds = config.games?.[currentGame] || {};
-            // 倍率の昇順にソート
-            //const sorted = Object.entries(odds).sort((a, b) => a[1] - b[1]);
-            container.innerHTML = Object.entries(odds).map(([name, mult]) => `
-                <button class="odds-btn" data-mult="${mult}">${name}<br>(${mult}倍)</button>
+            const odds = config.games?.[currentGame] || [];
+            container.innerHTML = odds.map(item => `
+                <button class="odds-btn" data-mult="${item.mult}">${item.name}<br>(${item.mult}倍)</button>
             `).join('');
-            // ボタンクリック
             document.querySelectorAll('.odds-btn').forEach(btn => {
                 btn.addEventListener('click', async () => {
                     if (!currentPointsPlayerId) {
@@ -502,7 +652,6 @@
                     const player = allPlayers.find(p => p.id === currentPointsPlayerId);
                     if (!player) return;
 
-                    // 掛け金を betAmounts から取得（なければ1）
                     let bet = betAmounts[currentPointsPlayerId];
                     if (bet === undefined || bet === '') {
                         bet = 1;
@@ -525,7 +674,7 @@
                         gameUndoStack.push({ playerId: currentPointsPlayerId, oldPoints, newPoints: data.new_points });
                         await refreshPlayers();
                         renderPointsBlocks();
-                        showToast(`${player.name} に ${bet*mult}pt 追加`);
+                        showToast(`${data.new_points}pt(+${bet * mult})`);
                     } else {
                         showToast(data.error || 'エラー', 'error');
                     }
@@ -566,7 +715,7 @@
                 gameUndoStack.push({ playerId: currentPointsPlayerId, oldPoints, newPoints: data.new_points });
                 await refreshPlayers();
                 renderPointsBlocks();
-                showToast(`${player.name} に ${bet*mult}pt 追加`);
+                showToast(`${data.new_points}pt(+${bet * mult})`);
             } else {
                 showToast(data.error || 'エラー', 'error');
             }
@@ -593,7 +742,7 @@
             }
         }
 
-        // ========== ランキング描画（目が開いている人のみ + 非表示対応） ==========
+        // ========== ランキング描画 ==========
         function renderRanking() {
             if (rankingHidden) {
                 document.getElementById('ranking-list').innerHTML = `
@@ -602,7 +751,7 @@
                         <p>-</p>
                         <p>-</p>
                     </div>
-        `       ;
+                `;
                 return;
             }
 
@@ -639,13 +788,13 @@
                         <span class="names">${namesStr}</span>
                         <span class="points">${pointsStr}pt</span>
                     </div>
-        `       ;
+                `;
                 i = j - 1;
             }
             document.getElementById('ranking-list').innerHTML = html || '<p>ランキング表示可能なプレイヤーがいません</p>';
         }
 
-        // ========== 管理用プレイヤーセレクト（番号付き） ==========
+        // ========== 管理用プレイヤーセレクト ==========
         function renderAdminSelect() {
             const numberedPlayers = getNumberedPlayers();
             const sel = document.getElementById('admin-player-select');
@@ -657,7 +806,7 @@
             await fetchPlayers();
             renderEntryList();
             renderSelectTab();
-            renderPointsBlocks();
+            renderPointsBlocks();   // 再描画（編集中ならフォーカスを戻す）
             renderOddsButtons();
             renderRanking();
             renderAdminSelect();
@@ -690,7 +839,7 @@
                 });
                 if (res.ok) {
                     document.getElementById('player-name').value = '';
-                    await refreshPlayers();  // 新しいプレイヤーにはデフォルトで目が開き、掛け金1が設定される
+                    await refreshPlayers();
                     showToast('追加しました');
                 } else {
                     const data = await res.json();
@@ -719,13 +868,14 @@
             // Points Undo
             document.getElementById('points-undo').addEventListener('click', undoGame);
 
-            // ========== ランキング表示/非表示トグル ==========
+            // ランキング表示/非表示トグル
             document.getElementById('toggle-ranking-visibility').addEventListener('click', () => {
                 rankingHidden = !rankingHidden;
                 const eyeIcon = document.getElementById('ranking-eye-icon');
                 eyeIcon.src = rankingHidden ? '/static/icons/eye-closed.svg' : '/static/icons/eye.svg';
-                renderRanking(); // 再描画
+                renderRanking();
             });
+
             // 全画面
             document.getElementById('fullscreen-btn').addEventListener('click', () => {
                 if (!document.fullscreenElement) {
@@ -808,12 +958,20 @@
                 }
             });
 
-            // 定期更新（ランキングなど）
+            // 定期更新（編集中は再描画をスキップしたいが、ここでは単純に実行）
             setInterval(async () => {
-                await fetchPlayers();
-                renderRanking();
-                renderPointsBlocks();  // ポイント表示も更新（掛け金は保持される）
-                renderSelectTab();      // 選択状態は維持されるが、ポイント表示更新のため
+                // 編集中の入力がある場合は再描画をスキップする（ただし、ランキングなどは更新したい）
+                if (!isEditing) {
+                    await fetchPlayers();
+                    renderRanking();
+                    renderPointsBlocks();
+                    renderSelectTab();
+                } else {
+                    // 編集中はデータの取得だけ行い、画面は更新しない（フォーカス維持）
+                    await fetchPlayers();
+                    renderRanking(); // ランキングは更新しても良さそう（フォーカスと無関係）
+                    // renderPointsBlocks はスキップ
+                }
             }, 5000);
         });
     </script>
