@@ -270,6 +270,9 @@
         .ranking-entry .points {
             font-weight: bold;
         }
+        .ranking-entry .points {
+            font-weight: bold;
+        }
         .crown {
             width: 128px;
             height: 128px;
@@ -361,19 +364,19 @@
         </div>
         <div class="card">
             <div id="odds-container">
-                <div id="odds-scroll" class="odds-scroll"></div>
-                <!-- カスタム倍率エリア -->
-                <div class="custom-multiplier-area">
-                    <span style="font-weight: bold;">カスタム倍率:</span>
-                    <input type="number" id="custom-multiplier" min="0.1" step="0.1" value="1" placeholder="倍率">
-                    <button id="apply-custom-multiplier" class="success">適用</button>
-                </div>
-            </div>
             <div style="flex:1; text-align: right;">
                 <button id="points-undo" class="icon-btn undo-btn" style="width: auto; display: flex; align-items: center; gap: 5px;">
                     <img src="/static/icons/undo.svg" alt="Undo" style="width: 24px; height: 24px;">
                     <span>やり直し</span>
                 </button>
+            </div>
+                <div id="odds-scroll" class="odds-scroll"></div>
+                <!-- カスタム倍率エリア -->
+                <div class="custom-multiplier-area">
+                    <span style="font-weight: bold;">カスタム倍率:</span>
+                    <input type="number" id="custom-multiplier" min="0.1" step="0.1" value="1" placeholder="倍率">
+                    <button id="apply-custom-multiplier" background: #6c757d;>適用</button>
+                </div>
             </div>
         </div>
     </div>
@@ -742,6 +745,17 @@
             }
         }
 
+        function getTier(points) {
+            const tiers = Object.entries(config.tiers);
+            tiers.sort((a, b) => b[1] - a[1]);
+
+            for (const [tier, requiredPoints] of tiers) {
+                if (points >= requiredPoints) {
+                    return tier;
+                }
+            }
+            return null
+        }
         // ========== ランキング描画 ==========
         function renderRanking() {
             if (rankingHidden) {
@@ -777,6 +791,7 @@
                 }
                 const namesStr = samePoints.join(', ');
                 const pointsStr = current.points;
+                const tierStr = getTier(current.points);
                 let crown = '';
                 if (rank === 1) crown = '<img src="/static/icons/crown-1st.svg" class="crown">';
                 else if (rank <= 3) crown = '<img src="/static/icons/crown-others.svg" class="crown">';
@@ -787,6 +802,7 @@
                         <span class="rank">${rank}位</span>
                         <span class="names">${namesStr}</span>
                         <span class="points">${pointsStr}pt</span>
+                        <span class="tier">ランク: ${tierStr}</span>
                     </div>
                 `;
                 i = j - 1;
