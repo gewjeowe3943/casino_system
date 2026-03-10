@@ -98,6 +98,9 @@
         .success {
             background: #28a745;
         }
+        #apply-custom-multiplier {
+            background:#555;
+        }
         .player-list {
             list-style: none;
             padding: 0;
@@ -267,18 +270,35 @@
         .ranking-entry .names {
             flex: 1;
         }
-        .ranking-entry .points {
+        .ranking-entry .tiers {
             font-weight: bold;
+            font-size: 42px;
         }
         .ranking-entry .points {
+            font-size: 48px;
             font-weight: bold;
         }
         .crown {
             width: 128px;
             height: 128px;
         }
-        #ranking-display {
-            font-size: 48px;
+        /* ランキングタイトルを海賊風に */
+        .ranking-display {
+            font-family: "游明朝", "Yu Mincho", "ヒラギノ明朝 ProN", "Hiragino Mincho ProN", "MS PMincho", "MS 明朝", serif;
+            color: #ffd700;
+            text-shadow: 3px 3px 0 #8b4513, 5px 5px 0 #4a2c1a;
+            border-bottom: 3px double #ffd700;
+            display: inline-block;
+            padding-bottom: 10px;
+        }
+        /* ランキングが非表示の時のメッセージ */
+        .ranking-hidden-message {
+            text-align: center;
+            padding: 40px;
+            font-size: 60px;
+            color: #ffd700;
+            background: rgba(0, 0, 0, 0.5);
+            border: 5px dashed #ffd700;
         }
         #toast {
             position: fixed;
@@ -373,9 +393,9 @@
                 <div id="odds-scroll" class="odds-scroll"></div>
                 <!-- カスタム倍率エリア -->
                 <div class="custom-multiplier-area">
-                    <span style="font-weight: bold;">カスタム倍率:</span>
+                    <span style="font-weight: bold; font-size: 16px;">カスタム倍率:</span>
                     <input type="number" id="custom-multiplier" min="0.1" step="0.1" value="1" placeholder="倍率">
-                    <button id="apply-custom-multiplier" background: #6c757d;>適用</button>
+                    <button id="apply-custom-multiplier">カスタム倍率適用</button>
                 </div>
             </div>
         </div>
@@ -385,7 +405,7 @@
     <div id="rank-section" class="tab-content">
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h2 id="ranking-display" style="margin: 0;">
+                <h2 class="ranking-display" style="margin: 0; font-size: 48px;">
                     <img src="/static/icons/bone.svg" alt="bone" style="width: 64px; height: 64px;"> ランキング <img src="/static/icons/bone.svg" alt="bone" style="width: 64px; height: 64px;">
                 </h2>
                 <div style="display: flex; gap: 10px;">
@@ -397,7 +417,7 @@
                     </button>
                 </div>
             </div>
-            <div id="ranking-list"></div>
+            <div class="ranking-display" id="ranking-list"></div>
         </div>
     </div>
 
@@ -417,6 +437,11 @@
                 <img src="/static/icons/undo.svg" alt="Undo" style="width: 24px; height: 24px;">
                 <span>やり直し</span>
             </button>
+        </div>
+        <div class="card">
+            <h2>バックアップ</h2>
+            <button id="manual-backup" class="success">USBにバックアップ</button>
+            <p style="font-size:16px; margin-top:10px;">※30分おきに自動バックアップされています</p>
         </div>
     </div>
 
@@ -533,12 +558,13 @@
             const list = document.getElementById('select-player-list');
             list.innerHTML = numberedPlayers.map(p => {
                 const checked = selectedPlayers.has(p.id) ? 'checked' : '';
+                const tierStr = getTier(p.points);
                 return `
                     <li>
                         <input type="checkbox" class="checkbox-large" data-id="${p.id}" ${checked}>
                         <span class="player-info">
                             <span class="player-number">${p.displayNumber}</span>
-                            ${p.name} (${p.points}pt)
+                            ${p.name} (${p.points}pt) ランク: ${tierStr}
                         </span>
                     </li>
                 `;
@@ -760,7 +786,7 @@
         function renderRanking() {
             if (rankingHidden) {
                 document.getElementById('ranking-list').innerHTML = `
-                    <div style="text-align: center; padding: 40px; font-size: 60px; color: #000000;">
+                    <div class="ranking-hidden-message">
                         ⚠️ ランキングは終了後に発表されます ⚠️
                         <p>-</p>
                         <p>-</p>
@@ -802,7 +828,7 @@
                         <span class="rank">${rank}位</span>
                         <span class="names">${namesStr}</span>
                         <span class="points">${pointsStr}pt</span>
-                        <span class="tier">ランク: ${tierStr}</span>
+                        <span class="tiers">ランク: ${tierStr}</span>
                     </div>
                 `;
                 i = j - 1;
@@ -971,6 +997,16 @@
                     showToast('取り消しました');
                 } else {
                     showToast('取り消し失敗', 'error');
+                }
+            });
+            // 手動バックアップ
+            document.getElementById('manual-backup').addEventListener('click', async () => {
+                const res = await fetch('/api/backup', { method: 'POST' });
+                if (res.ok) {
+                    showToast('バックアップ完了');
+                } else {
+                    const data = await res.json();
+                    showToast(data.error || 'バックアップ失敗', 'error');
                 }
             });
 

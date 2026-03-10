@@ -2,11 +2,47 @@ from flask import Flask, request, jsonify, render_template, send_from_directory
 import sqlite3
 import json
 import os
+import threading
+import time
+import shutil
+from datetime import datetime
 
 app = Flask(__name__)
 DATABASE = 'casino.db'
 CONFIG_PATH = 'config.json'
 
+# バックアップ先のパス（環境に合わせて変更してください）
+# Windowsの場合: USB_BACKUP_PATH = 'D:\\backup\\'
+# Linuxの場合: USB_BACKUP_PATH = '/media/usb/backup/'
+USB_BACKUP_PATH = "E:\\backup\\"  # 仮設定、実際に合わせて変更
+
+def backup_to_usb():
+    """SQLiteファイルをUSBメモリにバックアップ"""
+    if not os.path.exists(USB_BACKUP_PATH):
+        print(f"USBバックアップ先が見つかりません: {USB_BACKUP_PATH}")
+        return False
+    try:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_file = os.path.join(USB_BACKUP_PATH, f'casino_{timestamp}.db')
+        shutil.copy2(DATABASE, backup_file)
+        # 最新版も保存
+        shutil.copy2(DATABASE, os.path.join(USB_BACKUP_PATH, 'casino_latest.db'))
+        # ログ書き込み
+        with open(os.path.join(USB_BACKUP_PATH, 'backup.log'), 'a', encoding='utf-8') as f:
+            f.write(f'{timestamp} バックアップ成功\n')
+        print(f'バックアップ完了: {backup_file}')
+        return True
+    except Exception as e:
+        print(f'バックアップ失敗: {e}')
+        return False
+
+def scheduled_backup(interval=1800):
+    """定期バックアップを実行するスレッド関数"""
+    while True:
+        time.sleep(interval)
+        backup_to_usb()
+
+# 設定読み込み
 try:
     with open(CONFIG_PATH, encoding='utf-8') as f:
         config_data = json.load(f)
@@ -18,6 +54,7 @@ def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     conn.execute('PRAGMA foreign_keys = ON')
+    conn.execute('PRAGMA journal_mode = WAL')  # WALモード有効化
     return conn
 
 def init_db():
@@ -43,6 +80,11 @@ def init_db():
 
 init_db()
 
+# バックアップスレッド開始（デバッグモードでの二重起動防止）
+if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    backup_thread = threading.Thread(target=scheduled_backup, args=(1800,), daemon=True)
+    backup_thread.start()
+
 # 設定ファイルを返す
 @app.route('/api/config')
 def get_config():
@@ -67,7 +109,6 @@ def add_player():
         return jsonify({'error': '名前が必要です'}), 400
     try:
         with get_db() as conn:
-            # 明示的に points を INITIAL_POINTS に設定
             conn.execute('INSERT INTO players (name, points) VALUES (?, ?)', (name, INITIAL_POINTS))
             conn.commit()
         return jsonify({'message': f'{name} を追加しました'}), 201
@@ -180,6 +221,15 @@ def ranking():
     with get_db() as conn:
         players = conn.execute('SELECT id, name, points FROM players ORDER BY points DESC').fetchall()
     return jsonify([dict(p) for p in players])
+
+# 手動バックアップエンドポイント
+@app.route('/api/backup', methods=['POST'])
+def manual_backup():
+    success = backup_to_usb()
+    if success:
+        return jsonify({'message': 'バックアップ完了'})
+    else:
+        return jsonify({'error': 'バックアップ失敗'}), 500
 
 @app.route('/')
 def index():
